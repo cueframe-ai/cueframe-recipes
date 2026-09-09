@@ -42,4 +42,19 @@ The component uses WebGL2. CueFrame bakes it to an alpha layer before the final
 composition render, so the output is deterministic and does not depend on a
 browser preview cache.
 
+## App, CLI, and MCP workflow
+
+- **The app can reproduce the recipe for you.** Upload the source, open a new
+  project, then ask the Director: `Apply the yosemite-warp-text recipe from
+  cueframe-ai/cueframe-recipes using my uploaded Yosemite source.` The Director
+  loads the composition and exact component source from GitHub, maps the media
+  placeholder, validates the result, and previews the saved project.
+- **CLI reproduces it explicitly.** The commands above register the component,
+  upload and map the footage, then persist the recipe and render the same
+  composition the app opens.
+- **MCP gives an external agent the same controls.** Connect the CueFrame MCP
+  server, have the agent read this GitHub recipe, then use `create_component`,
+  `validate_composition`, `apply_composition`, and `preview_frame` without
+  translating the recipe into a different format.
+
 [nps]: https://www.nps.gov/media/video/view.htm?id=A45A7B7C-295C-4718-B5FA-FE30882C291F

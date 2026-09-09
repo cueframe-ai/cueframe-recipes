@@ -52,119 +52,27 @@
       "name": "Yosemite ranger — source",
       "contents": [
         {
-          "id": "peregrines-source-intro",
+          "id": "peregrines-source",
           "kind": "video",
           "startTime": 0,
-          "duration": 1.2,
+          "duration": 9.743,
           "source": {
             "kind": "media",
             "mediaId": "REPLACE_WITH_MEDIA_ID",
             "trim": {
               "start": 83.616,
-              "end": 84.816
-            },
-            "muted": false,
-            "volumeDb": -2,
-            "fadeInMs": 120,
-            "audioRole": "vo",
-            "reframe": {
-              "segments": [
-                {
-                  "startSec": 0,
-                  "endSec": 1.2,
-                  "focus": {
-                    "mode": "frame-center"
-                  },
-                  "zoom": 1,
-                  "intent": "Preserve the complete 16:9 ranger portrait and original NPS lower-third."
-                }
-              ]
-            }
-          },
-          "effects": [
-            {
-              "primitiveId": "color-grade",
-              "params": {
-                "preset": "cinematic",
-                "temperature": 3,
-                "intensity": 0.48
-              }
-            },
-            {
-              "primitiveId": "vignette",
-              "params": {
-                "intensity": 0.12
-              }
-            }
-          ]
-        },
-        {
-          "id": "REPLACE_WITH_MEDIA_ID",
-          "kind": "video",
-          "startTime": 1.2,
-          "duration": 2.75,
-          "source": {
-            "kind": "media",
-            "mediaId": "REPLACE_WITH_MEDIA_ID",
-            "trim": {
-              "start": 84.816,
-              "end": 87.566
-            },
-            "muted": false,
-            "volumeDb": -2,
-            "audioRole": "vo",
-            "reframe": {
-              "segments": [
-                {
-                  "startSec": 0,
-                  "endSec": 2.75,
-                  "focus": {
-                    "mode": "frame-center"
-                  },
-                  "zoom": 1,
-                  "intent": "Preserve the complete 16:9 ranger portrait and original NPS lower-third."
-                }
-              ]
-            }
-          },
-          "effects": [
-            {
-              "primitiveId": "color-grade",
-              "params": {
-                "preset": "cinematic",
-                "temperature": 3,
-                "intensity": 0.48
-              }
-            },
-            {
-              "primitiveId": "vignette",
-              "params": {
-                "intensity": 0.12
-              }
-            }
-          ]
-        },
-        {
-          "id": "peregrines-source-outro",
-          "kind": "video",
-          "startTime": 3.95,
-          "duration": 5.793,
-          "source": {
-            "kind": "media",
-            "mediaId": "REPLACE_WITH_MEDIA_ID",
-            "trim": {
-              "start": 87.566,
               "end": 93.359
             },
             "muted": false,
             "volumeDb": -2,
+            "fadeInMs": 120,
             "fadeOutMs": 280,
             "audioRole": "vo",
             "reframe": {
               "segments": [
                 {
                   "startSec": 0,
-                  "endSec": 5.793,
+                  "endSec": 9.743,
                   "focus": {
                     "mode": "frame-center"
                   },
