@@ -20,7 +20,7 @@ Park Service's [Yosemite Stock Footage (2021)][nps], which NPS identifies as
 public domain.
 
 ```bash
-cd examples/yosemite-warp-text
+cd cueframe-recipes/yosemite-warp-text
 
 # Register the local component with your CueFrame account.
 npx -y cueframe push yosemite-warp-title

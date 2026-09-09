@@ -52,17 +52,17 @@ the composition as unrelated literals.
 
 ## Quality bar
 
-[`rubric.md`](./rubric.md) records the sampled beats and kill criteria used for
-the published render. Treat it as an editable review contract, not marketing
-copy: preview the named frames, watch the motion window with audio, and do not
-accept a final render below the stated threshold.
+[`rubric.md`](./rubric.md) records the sampled beats and kill criteria for the
+refreshed render. Treat it as an editable review contract, not marketing copy:
+preview the named frames, watch the motion window with audio, and do not publish
+a final render below the stated threshold.
 
 ## Source and reuse
 
 Source: National Park Service, Yosemite National Park,
 [“Peregrine Falcons in Yosemite”][source]. Preserve the source credit and verify
 the publisher's current reuse guidance for your intended distribution. This
-repository distributes only the CueFrame recipe and its own rendered demo, not
-the source master.
+repository distributes only the CueFrame recipe and links to the finished demo;
+it does not distribute the source master.
 
 [source]: https://www.nps.gov/media/video/view.htm?id=53135a56-4998-4d6e-b26d-24fe0acca1c3

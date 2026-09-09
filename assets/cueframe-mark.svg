@@ -1,0 +1,18 @@
+<svg viewBox="0 0 256 256" width="256" height="256" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="CueFrame">
+  <clipPath id="cueframe-mark-clip">
+    <circle cx="128" cy="128" r="118" />
+  </clipPath>
+  <circle cx="128" cy="128" r="118" fill="#f7c948" />
+  <g clip-path="url(#cueframe-mark-clip)">
+    <path d="M88 128Q160 40 300-40" fill="none" stroke="#160f08" stroke-width="5" />
+    <path d="M88 128Q170 60 310 20" fill="none" stroke="#160f08" stroke-width="4.5" />
+    <path d="M88 128Q180 80 316 70" fill="none" stroke="#160f08" stroke-width="4.5" />
+    <path d="M88 128Q186 110 320 110" fill="none" stroke="#160f08" stroke-width="4.5" />
+    <path d="M88 128Q186 146 320 146" fill="none" stroke="#160f08" stroke-width="4.5" />
+    <path d="M88 128Q180 176 316 186" fill="none" stroke="#160f08" stroke-width="4.5" />
+    <path d="M88 128Q170 196 310 236" fill="none" stroke="#160f08" stroke-width="4.5" />
+    <path d="M88 128Q160 216 300 296" fill="none" stroke="#160f08" stroke-width="5" />
+  </g>
+  <circle cx="88" cy="128" r="20" fill="#160f08" />
+  <circle cx="88" cy="128" r="8" fill="#f7c948" />
+</svg>
