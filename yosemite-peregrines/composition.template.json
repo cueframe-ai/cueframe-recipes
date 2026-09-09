@@ -1,0 +1,151 @@
+{
+  "v": 1,
+  "format": {
+    "aspectRatio": "16:9",
+    "fps": 30,
+    "resolution": "fhd"
+  },
+  "markers": [
+    {
+      "id": "scene-start",
+      "kind": "scene",
+      "startTime": 0
+    }
+  ],
+  "tracks": [
+    {
+      "id": "track-video",
+      "kind": "video",
+      "name": "Yosemite ranger — source",
+      "contents": [
+        {
+          "id": "peregrines-source",
+          "kind": "video",
+          "startTime": 0,
+          "duration": 9.743,
+          "source": {
+            "kind": "media",
+            "mediaId": "REPLACE_WITH_MEDIA_ID",
+            "trim": {
+              "start": 83.616,
+              "end": 93.359
+            },
+            "muted": false,
+            "volumeDb": -2,
+            "fadeInMs": 120,
+            "fadeOutMs": 280,
+            "audioRole": "vo",
+            "reframe": {
+              "segments": [
+                {
+                  "startSec": 0,
+                  "endSec": 9.743,
+                  "focus": {
+                    "mode": "frame-center"
+                  },
+                  "zoom": 1,
+                  "intent": "Preserve the complete 16:9 ranger portrait and original NPS lower-third."
+                }
+              ]
+            }
+          },
+          "effects": [
+            {
+              "primitiveId": "color-grade",
+              "params": {
+                "preset": "cinematic",
+                "temperature": 3,
+                "intensity": 0.48
+              }
+            },
+            {
+              "primitiveId": "vignette",
+              "params": {
+                "intensity": 0.12
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "track-depth-title",
+      "kind": "overlay",
+      "name": "Phenomenal — behind subject",
+      "contents": [
+        {
+          "id": "peregrines-phenomenal-title",
+          "kind": "overlay",
+          "startTime": 1.2,
+          "duration": 2.75,
+          "region": {
+            "x": 0.04,
+            "y": 0.26,
+            "w": 0.92,
+            "h": 0.42
+          },
+          "source": {
+            "kind": "overlay",
+            "primitiveId": "heroText",
+            "params": {
+              "text": "PHENOMENAL",
+              "fontSizePct": 12,
+              "fontWeight": 400,
+              "textColor": "$brand:colors.accent",
+              "fontFamily": "$brand:fonts.heading.family",
+              "entrance": "stagger-up",
+              "durationMs": 320,
+              "easing": "ease-out",
+              "revealAtMs": [0]
+            },
+            "zPlane": "behind-subject"
+          }
+        }
+      ]
+    }
+  ],
+  "captions": {
+    "source": "authored",
+    "segments": [
+      {
+        "words": [
+          { "text": "It's", "startMs": 369, "endMs": 849 },
+          { "text": "just", "startMs": 849, "endMs": 1089 },
+          { "text": "phenomenal", "startMs": 1304, "endMs": 2024, "emphasis": true },
+          { "text": "how", "startMs": 2024, "endMs": 2584 },
+          { "text": "unbelievably", "startMs": 2584, "endMs": 3224 },
+          { "text": "fast", "startMs": 3224, "endMs": 3544, "emphasis": true },
+          { "text": "they", "startMs": 3544, "endMs": 3704 },
+          { "text": "are", "startMs": 3704, "endMs": 3864 },
+          { "text": "when", "startMs": 3864, "endMs": 4024 },
+          { "text": "they're", "startMs": 4024, "endMs": 4184 },
+          { "text": "in", "startMs": 4184, "endMs": 4344 },
+          { "text": "that", "startMs": 4344, "endMs": 4744 },
+          { "text": "perfect,", "startMs": 4744, "endMs": 5544 },
+          { "text": "tuck", "startMs": 6424, "endMs": 6744 },
+          { "text": "or", "startMs": 6744, "endMs": 6904 },
+          { "text": "stoop", "startMs": 6904, "endMs": 7384 },
+          { "text": "as", "startMs": 7384, "endMs": 7624 },
+          { "text": "biologists", "startMs": 7624, "endMs": 8344 },
+          { "text": "call", "startMs": 8344, "endMs": 8504 },
+          { "text": "it", "startMs": 8504, "endMs": 8584 },
+          { "text": "in", "startMs": 8584, "endMs": 8744 },
+          { "text": "the", "startMs": 8744, "endMs": 8904 },
+          { "text": "dive.", "startMs": 8904, "endMs": 9544 }
+        ]
+      }
+    ],
+    "style": {
+      "fontFamily": "Inter",
+      "fontSize": 4.1,
+      "fontWeight": 500,
+      "color": "#f4ece0",
+      "emphasisColor": "#f7c948",
+      "plate": "glass",
+      "position": "bottom",
+      "maxWidthPercent": 72,
+      "entrance": "word-pop",
+      "entranceMs": 160
+    }
+  }
+}

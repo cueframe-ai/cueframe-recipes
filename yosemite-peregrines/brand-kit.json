@@ -1,0 +1,45 @@
+{
+  "kitId": "cueframe-recipes-demo",
+  "name": "CueFrame OSS demo",
+  "description": "CueFrame identity for public examples without automatic bookends.",
+  "tagline": "One video substrate for humans and agents.",
+  "colors": {
+    "primary": "#f7c948",
+    "secondary": "#eba61f",
+    "accent": "#f7c948",
+    "background": "#14100c",
+    "text": "#f4ece0"
+  },
+  "headingFont": {
+    "fontFamily": "Instrument Serif",
+    "fontWeight": 400
+  },
+  "bodyFont": {
+    "fontFamily": "Inter",
+    "fontWeight": 500
+  },
+  "captionProfile": {
+    "fontFamily": "Inter",
+    "fontWeight": 500,
+    "color": "#f4ece0",
+    "highlightColor": "#f7c948",
+    "plate": "glass",
+    "position": "bottom",
+    "textTransform": "none",
+    "entrance": "word-pop",
+    "entranceMs": 160
+  },
+  "motion": {
+    "entrance": "stagger-up",
+    "duration": 320,
+    "easing": "ease-out",
+    "staggerMs": 60,
+    "exitMs": 260
+  },
+  "logo": {
+    "src": "https://raw.githubusercontent.com/cueframe-ai/cueframe-recipes/main/assets/cueframe-wordmark-on-dark.png",
+    "alt": "CueFrame",
+    "placement": "tr",
+    "sizePct": 16
+  }
+}

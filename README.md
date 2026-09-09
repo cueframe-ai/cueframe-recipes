@@ -9,7 +9,7 @@ and explains the editorial decisions behind the finished render.
 | Use case | What you learn | Recipe |
 | --- | --- | --- |
 | Custom motion graphics | Author a reusable component, layer it over real footage, preserve source ambience, and render the shared composition | [Yosemite WarpText](./yosemite-warp-text) |
-| Subject-aware typography | Place editable type behind a real speaker while keeping captions, grade, and audio independent | Yosemite Peregrines — in review |
+| Subject-aware typography | Place editable type behind a real speaker while keeping captions, grade, and audio independent | [Yosemite Peregrines](./yosemite-peregrines) |
 
 ## Recipes we are building next
 
