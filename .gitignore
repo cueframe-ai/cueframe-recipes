@@ -1,0 +1,9 @@
+composition.json
+*.mp4
+*.mov
+*.mkv
+*.webm
+*.wav
+*.m4a
+*.mp3
+.DS_Store

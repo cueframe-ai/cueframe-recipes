@@ -1,0 +1,69 @@
+{
+  "v": 1,
+  "format": {
+    "aspectRatio": "16:9",
+    "fps": 30,
+    "resolution": "fhd"
+  },
+  "tracks": [
+    {
+      "id": "upper-falls-video",
+      "kind": "video",
+      "name": "Upper Falls — source",
+      "contents": [
+        {
+          "id": "upper-falls-main",
+          "kind": "video",
+          "startTime": 0,
+          "duration": 8,
+          "fit": "cover",
+          "source": {
+            "kind": "media",
+            "mediaId": "REPLACE_WITH_MEDIA_ID",
+            "trim": {
+              "start": 4,
+              "end": 12
+            },
+            "muted": false,
+            "volumeDb": -3,
+            "fadeInMs": 350,
+            "fadeOutMs": 600,
+            "audioRole": "ambience"
+          },
+          "effects": [
+            {
+              "primitiveId": "color-grade",
+              "params": {
+                "preset": "cinematic",
+                "temperature": 4,
+                "intensity": 0.74
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "upper-falls-title",
+      "kind": "overlay",
+      "name": "CueFrame WarpText",
+      "contents": [
+        {
+          "id": "upper-falls-warp-title",
+          "kind": "overlay",
+          "startTime": 0,
+          "duration": 8,
+          "source": {
+            "kind": "component",
+            "componentId": "yosemite-warp-title",
+            "props": {
+              "text": "CARVED BY\nWATER",
+              "color": "#eba61f"
+            },
+            "zPlane": "front"
+          }
+        }
+      ]
+    }
+  ]
+}

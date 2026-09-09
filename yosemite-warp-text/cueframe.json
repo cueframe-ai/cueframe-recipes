@@ -1,0 +1,8 @@
+{
+  "componentsDir": "cueframe/components",
+  "components": {
+    "yosemite-warp-title": {
+      "custom": true
+    }
+  }
+}
