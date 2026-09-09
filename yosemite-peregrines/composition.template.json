@@ -14,32 +14,64 @@
   ],
   "tracks": [
     {
+      "id": "track-depth-title",
+      "kind": "overlay",
+      "name": "Phenomenal — behind subject",
+      "contents": [
+        {
+          "id": "peregrines-phenomenal-title",
+          "kind": "overlay",
+          "startTime": 1.2,
+          "duration": 2.75,
+          "position": {
+            "x": 0.5,
+            "y": 0.56
+          },
+          "source": {
+            "kind": "overlay",
+            "primitiveId": "heroText",
+            "params": {
+              "text": "PHENOMENAL",
+              "fontSizePct": 27,
+              "fontWeight": 400,
+              "textColor": "$brand:colors.accent",
+              "fontFamily": "$brand:fonts.heading.family",
+              "entrance": "stagger-up",
+              "durationMs": 320,
+              "easing": "ease-out",
+              "revealAtMs": [0]
+            },
+            "zPlane": "behind-subject"
+          }
+        }
+      ]
+    },
+    {
       "id": "track-video",
       "kind": "video",
       "name": "Yosemite ranger — source",
       "contents": [
         {
-          "id": "peregrines-source",
+          "id": "peregrines-source-intro",
           "kind": "video",
           "startTime": 0,
-          "duration": 9.743,
+          "duration": 1.2,
           "source": {
             "kind": "media",
             "mediaId": "REPLACE_WITH_MEDIA_ID",
             "trim": {
               "start": 83.616,
-              "end": 93.359
+              "end": 84.816
             },
             "muted": false,
             "volumeDb": -2,
             "fadeInMs": 120,
-            "fadeOutMs": 280,
             "audioRole": "vo",
             "reframe": {
               "segments": [
                 {
                   "startSec": 0,
-                  "endSec": 9.743,
+                  "endSec": 1.2,
                   "focus": {
                     "mode": "frame-center"
                   },
@@ -65,41 +97,99 @@
               }
             }
           ]
-        }
-      ]
-    },
-    {
-      "id": "track-depth-title",
-      "kind": "overlay",
-      "name": "Phenomenal — behind subject",
-      "contents": [
+        },
         {
-          "id": "peregrines-phenomenal-title",
-          "kind": "overlay",
+          "id": "REPLACE_WITH_MEDIA_ID",
+          "kind": "video",
           "startTime": 1.2,
           "duration": 2.75,
-          "region": {
-            "x": 0.04,
-            "y": 0.26,
-            "w": 0.92,
-            "h": 0.42
-          },
           "source": {
-            "kind": "overlay",
-            "primitiveId": "heroText",
-            "params": {
-              "text": "PHENOMENAL",
-              "fontSizePct": 12,
-              "fontWeight": 400,
-              "textColor": "$brand:colors.accent",
-              "fontFamily": "$brand:fonts.heading.family",
-              "entrance": "stagger-up",
-              "durationMs": 320,
-              "easing": "ease-out",
-              "revealAtMs": [0]
+            "kind": "media",
+            "mediaId": "REPLACE_WITH_MEDIA_ID",
+            "trim": {
+              "start": 84.816,
+              "end": 87.566
             },
-            "zPlane": "behind-subject"
-          }
+            "muted": false,
+            "volumeDb": -2,
+            "audioRole": "vo",
+            "reframe": {
+              "segments": [
+                {
+                  "startSec": 0,
+                  "endSec": 2.75,
+                  "focus": {
+                    "mode": "frame-center"
+                  },
+                  "zoom": 1,
+                  "intent": "Preserve the complete 16:9 ranger portrait and original NPS lower-third."
+                }
+              ]
+            }
+          },
+          "effects": [
+            {
+              "primitiveId": "color-grade",
+              "params": {
+                "preset": "cinematic",
+                "temperature": 3,
+                "intensity": 0.48
+              }
+            },
+            {
+              "primitiveId": "vignette",
+              "params": {
+                "intensity": 0.12
+              }
+            }
+          ]
+        },
+        {
+          "id": "peregrines-source-outro",
+          "kind": "video",
+          "startTime": 3.95,
+          "duration": 5.793,
+          "source": {
+            "kind": "media",
+            "mediaId": "REPLACE_WITH_MEDIA_ID",
+            "trim": {
+              "start": 87.566,
+              "end": 93.359
+            },
+            "muted": false,
+            "volumeDb": -2,
+            "fadeOutMs": 280,
+            "audioRole": "vo",
+            "reframe": {
+              "segments": [
+                {
+                  "startSec": 0,
+                  "endSec": 5.793,
+                  "focus": {
+                    "mode": "frame-center"
+                  },
+                  "zoom": 1,
+                  "intent": "Preserve the complete 16:9 ranger portrait and original NPS lower-third."
+                }
+              ]
+            }
+          },
+          "effects": [
+            {
+              "primitiveId": "color-grade",
+              "params": {
+                "preset": "cinematic",
+                "temperature": 3,
+                "intensity": 0.48
+              }
+            },
+            {
+              "primitiveId": "vignette",
+              "params": {
+                "intensity": 0.12
+              }
+            }
+          ]
         }
       ]
     }
@@ -144,7 +234,7 @@
       "plate": "glass",
       "position": "bottom",
       "maxWidthPercent": 72,
-      "entrance": "word-pop",
+      "entrance": "none",
       "entranceMs": 160
     }
   }

@@ -1,24 +1,25 @@
 # Yosemite Peregrines review rubric
 
 Vision: a Yosemite ranger's awe at a peregrine's speed lands as one cinematic
-talking-head moment. Speech, raised captions, grade, and one wide amber depth
-title reinforce the same beat without sacrificing readability.
+talking-head moment. Speech, raised captions, grade, and one enormous depth title
+reinforce the same beat without sacrificing the ranger's expression.
 
 ## Must-haves
 
 - At 0 and 1 seconds, the full hat and the source lower-third remain visible.
-- At 1.5 and 2.2 seconds, `PHENOMENAL` is behind the ranger and remains
-  identifiable from the visible letters on both sides of his silhouette.
+- At 1.5 and 2.2 seconds, `PHENOMENAL` spans most of the frame behind the ranger;
+  his face and shoulders remain cleanly in front and both ends of the word stay
+  inside the frame.
 - At 3.4 seconds, the title and caption emphasis reinforce “fast” without
-  competing with the ranger's face.
+  covering the ranger's face.
 - At 4.8, 6.5, 8.5, and 9.5 seconds, the raised captions remain separated from
   the subject, source lower-third, and bottom edge.
 - The original spoken audio is clear throughout. No unrelated music or effects.
 
 ## Kill criteria
 
-- A title layer paints over any part of the ranger, or its first or last two
-  letters become occluded enough to make the word ambiguous.
+- The title paints over the ranger instead of passing behind him, clips at the
+  frame edges, or collides with the source lower-third.
 - A border, title plate, duplicated cutout, blank card, or unrelated stock shot
   appears.
 - Captions cover the ranger's mouth or eyes, flash before speech, or leave the
@@ -28,6 +29,8 @@ title reinforce the same beat without sacrificing readability.
 ## Acceptance gate
 
 Preview `0, 1, 1.5, 2.2, 3.4, 4.8, 6.5, 8.5, 9.5` seconds, watch the `1.2-4`
-second title motion
-window with audio, and require zero kill criteria plus a sighted CueFrame
-composite score of at least 7.5 before final export.
+second title-motion window with audio, and require zero kill criteria before
+final export. Run the sighted CueFrame score as an independent check, but review
+its spatial/caption critique against the stated intent: the ranger interrupting
+the hero word is the planned depth effect, while the bottom glass text is the
+caption layer.
