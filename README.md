@@ -25,7 +25,12 @@ MCP, REST API, or CLI.
 
 ## Run a recipe
 
-Install the CueFrame CLI, open a recipe directory, and follow its README:
+In the CueFrame app, upload the recipe's source, open a project, and ask the
+Director to apply the recipe by its directory name. It fetches the canonical
+composition and component source from this repository, maps project-specific
+IDs, validates the result, and checks the saved structure before previewing.
+
+Or install the CueFrame CLI, open a recipe directory, and follow its README:
 
 ```bash
 npx -y cueframe --help
