@@ -19,25 +19,32 @@ and explains the editorial decisions behind the finished render.
 - Branded launch video with a real product capture.
 - One master edit derived into 16:9, 1:1, 4:5, and 9:16.
 
-These are use-case recipes, not flattened templates. Replace the source media,
-change the editable composition, and use the same project from the desktop app,
-MCP, REST API, or CLI.
+These are use-case recipes, not flattened templates. Each recipe publishes a
+portable `recipe.cueframe` project with named media slots. Replace the source
+media, change the editable composition, and use that same project from the
+desktop app, MCP, REST API, or CLI.
 
 ## Run a recipe
 
-In the CueFrame app, upload the recipe's source, open a project, and ask the
-Director to apply the recipe by its directory name. It fetches the canonical
-composition and component source from this repository, maps project-specific
-IDs, validates the result, and checks the saved structure before previewing.
-
-Or install the CueFrame CLI, open a recipe directory, and follow its README:
+Open a recipe's `recipe.cueframe` file in the desktop app and locate its source
+media when prompted, or run it by slug from the CLI:
 
 ```bash
-npx -y cueframe --help
+npx -y cueframe recipe run yosemite-peregrines --media ./source.mp4
 ```
+
+An MCP-connected agent resolves the same slug from this repository and applies
+the same project artifact. Recipe definitions do not live in the app, CLI, MCP
+server, or landing site.
 
 Every recipe documents its source attribution. Source masters are excluded;
 bring media you have permission to edit.
+
+Validate the catalog, portable projects, canonical URLs, and media slots with:
+
+```bash
+node validate-recipes.mjs
+```
 
 ## Contributing
 

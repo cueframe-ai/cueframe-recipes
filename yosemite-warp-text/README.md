@@ -15,46 +15,40 @@ The sample demonstrates the same project model used by every CueFrame surface:
 
 ## Reproduce it
 
-Use footage you have permission to edit. The published demo uses the National
-Park Service's [Yosemite Stock Footage (2021)][nps], which NPS identifies as
-public domain.
+Use footage you have permission to edit. The published demo uses CueFrame's
+archived `Yosemite_Upper_Falls___8K_source.webm`: a 21.828-second, 7680×4320
+VP9 source with stereo Opus audio. The earlier link to the National Park
+Service's 2021 Yosemite stock-footage master was incorrect; that master is a
+different video and is not the source of this render.
+
+Every surface starts from the same portable [`recipe.cueframe`](./recipe.cueframe)
+project in this repository.
+
+### CLI
 
 ```bash
-cd cueframe-recipes/yosemite-warp-text
-
-# Register the local component with your CueFrame account.
-npx -y cueframe push yosemite-warp-title
-
-# Upload your downloaded source and retain the mediaItemId from the JSON output.
-npx -y cueframe upload ./yosemite-upper-falls.mp4 --json
-
-# Put that id into composition.json without modifying the tracked template.
-cp composition.template.json composition.json
-# Replace REPLACE_WITH_MEDIA_ID in composition.json with the returned id.
-
-# Create the shared project, save the recipe, then render it.
-npx -y cueframe project create -n "Yosemite WarpText" -a 16:9 --json
-npx -y cueframe composition put <projectId> -b @composition.json --force
-npx -y cueframe render <projectId> -o yosemite-warp-text.mp4 --json
+npx -y cueframe recipe run yosemite-warp-text \
+  --media ./yosemite-upper-falls.mp4 \
+  --out ./yosemite-warp-text.mp4
 ```
+
+The command resolves the canonical recipe, installs its authored component,
+uploads and binds your source, validates the composition, and renders it. Add
+`--no-render` when you only want the editable cloud project.
+
+### Desktop app
+
+Download and open [`recipe.cueframe`](./recipe.cueframe). CueFrame asks you to
+locate the missing source footage and opens the complete editable timeline,
+including the authored WarpText component.
+
+### MCP
+
+Ask your CueFrame-connected agent to apply `yosemite-warp-text` from
+`cueframe-ai/cueframe-recipes` to your source. The agent resolves the same
+project artifact and uses CueFrame's media, component, project, validation,
+preview, and render tools. It does not reconstruct the edit from prose.
 
 The component uses WebGL2. CueFrame bakes it to an alpha layer before the final
 composition render, so the output is deterministic and does not depend on a
 browser preview cache.
-
-## App, CLI, and MCP workflow
-
-- **The app can reproduce the recipe for you.** Upload the source, open a new
-  project, then ask the Director: `Apply the yosemite-warp-text recipe from
-  cueframe-ai/cueframe-recipes using my uploaded Yosemite source.` The Director
-  loads the composition and exact component source from GitHub, maps the media
-  placeholder, validates the result, and previews the saved project.
-- **CLI reproduces it explicitly.** The commands above register the component,
-  upload and map the footage, then persist the recipe and render the same
-  composition the app opens.
-- **MCP gives an external agent the same controls.** Connect the CueFrame MCP
-  server, have the agent read this GitHub recipe, then use `create_component`,
-  `validate_composition`, `apply_composition`, and `preview_frame` without
-  translating the recipe into a different format.
-
-[nps]: https://www.nps.gov/media/video/view.htm?id=A45A7B7C-295C-4718-B5FA-FE30882C291F

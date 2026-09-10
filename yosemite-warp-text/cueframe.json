@@ -2,7 +2,17 @@
   "componentsDir": "cueframe/components",
   "components": {
     "yosemite-warp-title": {
-      "custom": true
+      "custom": true,
+      "manifest": {
+        "version": 2,
+        "assets": {},
+        "graphics": {
+          "api": "webgl2",
+          "required": true,
+          "accelerationPreference": "software-allowed"
+        },
+        "alphaPolicy": "requires-transparency"
+      }
     }
   }
 }
