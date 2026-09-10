@@ -7,6 +7,28 @@
   },
   "tracks": [
     {
+      "id": "upper-falls-title",
+      "kind": "overlay",
+      "name": "CueFrame WarpText",
+      "contents": [
+        {
+          "id": "upper-falls-warp-title",
+          "kind": "overlay",
+          "startTime": 0,
+          "duration": 8,
+          "source": {
+            "kind": "component",
+            "componentId": "yosemite-warp-title",
+            "props": {
+              "text": "CARVED BY\nWATER",
+              "color": "#eba61f"
+            },
+            "zPlane": "front"
+          }
+        }
+      ]
+    },
+    {
       "id": "upper-falls-video",
       "kind": "video",
       "name": "Upper Falls — source",
@@ -40,28 +62,6 @@
               }
             }
           ]
-        }
-      ]
-    },
-    {
-      "id": "upper-falls-title",
-      "kind": "overlay",
-      "name": "CueFrame WarpText",
-      "contents": [
-        {
-          "id": "upper-falls-warp-title",
-          "kind": "overlay",
-          "startTime": 0,
-          "duration": 8,
-          "source": {
-            "kind": "component",
-            "componentId": "yosemite-warp-title",
-            "props": {
-              "text": "CARVED BY\nWATER",
-              "color": "#eba61f"
-            },
-            "zPlane": "front"
-          }
         }
       ]
     }

@@ -1,0 +1,152 @@
+{
+  "version": 4,
+  "id": "recipe-yosemite-warp-text",
+  "name": "Carved by water",
+  "createdAt": 0,
+  "modifiedAt": 0,
+  "composition": {
+    "v": 1,
+    "format": {
+      "aspectRatio": "16:9",
+      "fps": 30,
+      "resolution": "fhd"
+    },
+    "tracks": [
+      {
+        "id": "upper-falls-title",
+        "kind": "overlay",
+        "name": "CueFrame WarpText",
+        "contents": [
+          {
+            "id": "upper-falls-warp-title",
+            "kind": "overlay",
+            "startTime": 0,
+            "duration": 8,
+            "source": {
+              "kind": "component",
+              "componentId": "yosemite-warp-title",
+              "props": {
+                "text": "CARVED BY\nWATER",
+                "color": "#eba61f",
+                "componentRef": {
+                  "version": 1,
+                  "sourceVersionId": "6c88e26e2f3c67f4bd7380a4bb07c23f5b55706af939ae0cbd1938e6d2f543d9"
+                }
+              },
+              "zPlane": "front",
+              "assets": {}
+            }
+          }
+        ]
+      },
+      {
+        "id": "upper-falls-video",
+        "kind": "video",
+        "name": "Upper Falls — source",
+        "contents": [
+          {
+            "id": "upper-falls-main",
+            "kind": "video",
+            "startTime": 0,
+            "duration": 8,
+            "fit": "cover",
+            "source": {
+              "kind": "media",
+              "mediaId": "recipe-media-yosemite-warp-text",
+              "trim": {
+                "start": 4,
+                "end": 12
+              },
+              "muted": false,
+              "volumeDb": -3,
+              "fadeInMs": 350,
+              "fadeOutMs": 600,
+              "audioRole": "ambience"
+            },
+            "effects": [
+              {
+                "primitiveId": "color-grade",
+                "params": {
+                  "preset": "cinematic",
+                  "temperature": 4,
+                  "intensity": 0.74
+                }
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "pool": [
+    {
+      "id": "recipe-media-yosemite-warp-text",
+      "name": "Yosemite Upper Falls source.mp4",
+      "kind": "video",
+      "filePath": null,
+      "cloud": null
+    }
+  ],
+  "authoredComponents": {
+    "yosemite-warp-title": {
+      "headVersionId": "6c88e26e2f3c67f4bd7380a4bb07c23f5b55706af939ae0cbd1938e6d2f543d9",
+      "versions": {
+        "6c88e26e2f3c67f4bd7380a4bb07c23f5b55706af939ae0cbd1938e6d2f543d9": {
+          "version": 2,
+          "componentId": "yosemite-warp-title",
+          "tsxSource": "import React, { useLayoutEffect, useRef } from 'react';\nimport { AbsoluteFill, interpolate, useCurrentFrame, useVideoConfig } from 'remotion';\n\nconst vertex = `#version 300 es\nin vec2 position;\nin vec2 uv;\nout vec2 vUv;\nvoid main() {\n  vUv = uv;\n  gl_Position = vec4(position, 0.0, 1.0);\n}`;\n\n// React Bits WarpText fragment shader, kept intact apart from uOpacity so the\n// component can enter and leave on the composition timeline deterministically.\nconst fragment = `#version 300 es\nprecision highp float;\n\nuniform sampler2D uTextTexture;\nuniform vec2 uResolution;\nuniform vec2 uPointer;\nuniform float uPointerActive;\nuniform float uTime;\nuniform float uWarpStrength;\nuniform float uWarpScale;\nuniform float uSpeed;\nuniform float uPointerInfluence;\nuniform float uPointerStrength;\nuniform float uRefraction;\nuniform float uRipple;\nuniform float uMotion;\nuniform float uOpacity;\n\nin vec2 vUv;\nout vec4 fragColor;\n\nfloat hash(vec2 p) {\n  p = fract(p * vec2(123.34, 456.21));\n  p += dot(p, p + 45.32);\n  return fract(p.x * p.y);\n}\n\nfloat noise(vec2 p) {\n  vec2 i = floor(p);\n  vec2 f = fract(p);\n  vec2 u = f * f * (3.0 - 2.0 * f);\n  float a = hash(i);\n  float b = hash(i + vec2(1.0, 0.0));\n  float c = hash(i + vec2(0.0, 1.0));\n  float d = hash(i + vec2(1.0, 1.0));\n  return mix(mix(a, b, u.x), mix(c, d, u.x), u.y);\n}\n\nfloat fbm(vec2 p) {\n  float value = 0.0;\n  float amplitude = 0.5;\n  for (int i = 0; i < 4; i++) {\n    value += amplitude * noise(p);\n    p *= 2.02;\n    amplitude *= 0.5;\n  }\n  return value;\n}\n\nvec4 sampleText(vec2 uv) {\n  if (uv.x < 0.0 || uv.x > 1.0 || uv.y < 0.0 || uv.y > 1.0) return vec4(0.0);\n  return texture(uTextTexture, uv);\n}\n\nvoid main() {\n  vec2 uv = vUv;\n  float aspect = uResolution.x / max(uResolution.y, 1.0);\n  float time = uTime * uSpeed;\n  float scale = max(uWarpScale, 0.001);\n\n  vec2 drift = vec2(time * 0.055, -time * 0.045);\n  float n1 = fbm(uv * scale * 3.1 + drift);\n  float n2 = fbm((uv + 19.17) * scale * 3.4 - drift.yx);\n  vec2 ambient = (vec2(n1, n2) - 0.5) * uWarpStrength * 0.045 * uMotion;\n\n  vec2 pointerDelta = uv - uPointer;\n  vec2 aspectDelta = vec2(pointerDelta.x * aspect, pointerDelta.y);\n  float dist = length(aspectDelta);\n  float radius = max(uPointerInfluence, 0.001);\n  float t = clamp(dist / radius, 0.0, 1.0);\n  float lens = smoothstep(radius, 0.0, dist) * uPointerActive;\n  float bulge = t * (1.0 - t) * (1.0 - t) * 6.75 * uPointerActive;\n  vec2 dir = dist > 0.0001 ? vec2(aspectDelta.x / aspect, aspectDelta.y) / dist : vec2(0.0);\n\n  float rippleWave = sin(dist * 28.0 - time * 4.2) * 0.5 + 0.5;\n  float rippleRing = (rippleWave - 0.5) * uRipple;\n  vec2 pointerWarp = -dir * bulge * uPointerStrength * 0.045;\n  pointerWarp += dir * rippleRing * bulge * uPointerStrength * 0.016;\n\n  vec2 displaced = uv + ambient + pointerWarp;\n  vec2 splitDir = ambient + pointerWarp;\n  float splitLen = length(splitDir);\n  splitDir = splitLen > 0.00001 ? splitDir / splitLen : vec2(0.7071, 0.7071);\n  vec2 split = splitDir * uRefraction * 0.16 * (0.35 + lens * 1.65);\n\n  vec4 base = sampleText(displaced);\n  float r = sampleText(displaced + split).r;\n  float g = base.g;\n  float b = sampleText(displaced - split).b;\n  float a = max(max(sampleText(displaced + split).a, base.a), sampleText(displaced - split).a);\n  vec3 color = vec3(r, g, b) + lens * base.a * 0.055;\n  fragColor = vec4(color, a * uOpacity);\n}`;\n\ntype Runtime = {\n  gl: WebGL2RenderingContext;\n  program: WebGLProgram;\n  uniform: (name: string) => WebGLUniformLocation | null;\n};\n\nconst clamp = (value: number) => Math.max(0, Math.min(1, value));\nconst smooth = (value: number) => {\n  const t = clamp(value);\n  return t * t * (3 - 2 * t);\n};\n\nfunction CueFrameLogo({ opacity }: { opacity: number }) {\n  return (\n    <div style={{ position: 'absolute', left: 112, bottom: 76, display: 'flex', alignItems: 'center', gap: 22, opacity }}>\n      <svg width=\"70\" height=\"70\" viewBox=\"0 0 256 256\" aria-hidden=\"true\">\n        <defs><clipPath id=\"cueframe-logo-clip\"><circle cx=\"128\" cy=\"128\" r=\"118\" /></clipPath></defs>\n        <circle cx=\"128\" cy=\"128\" r=\"118\" fill=\"#eba61f\" />\n        <g clipPath=\"url(#cueframe-logo-clip)\" stroke=\"#0a0a0a\" fill=\"none\">\n          <path d=\"M88 128Q160 40 300-40\" strokeWidth=\"5\" />\n          <path d=\"M88 128Q170 60 310 20\" strokeWidth=\"4.5\" />\n          <path d=\"M88 128Q180 80 316 70\" strokeWidth=\"4.5\" />\n          <path d=\"M88 128Q186 110 320 110\" strokeWidth=\"4.5\" />\n          <path d=\"M88 128Q186 146 320 146\" strokeWidth=\"4.5\" />\n          <path d=\"M88 128Q180 176 316 186\" strokeWidth=\"4.5\" />\n          <path d=\"M88 128Q170 196 310 236\" strokeWidth=\"4.5\" />\n          <path d=\"M88 128Q160 216 300 296\" strokeWidth=\"5\" />\n        </g>\n        <circle cx=\"88\" cy=\"128\" r=\"20\" fill=\"#0a0a0a\" />\n        <circle cx=\"88\" cy=\"128\" r=\"8\" fill=\"#7ec8e3\" />\n      </svg>\n      <span style={{ color: '#f7f1e6', fontFamily: 'Bricolage Grotesque, Inter, sans-serif', fontSize: 29, fontWeight: 650, letterSpacing: 1.2 }}>\n        CUEFRAME\n      </span>\n    </div>\n  );\n}\n\nfunction WarpCanvas({ text, color }: { text: string; color: string }) {\n  const frame = useCurrentFrame();\n  const { width, height, durationInFrames } = useVideoConfig();\n  const canvasRef = useRef<HTMLCanvasElement>(null);\n  const runtimeRef = useRef<Runtime | null>(null);\n\n  useLayoutEffect(() => {\n    const canvas = canvasRef.current;\n    if (!canvas) return;\n    const gl = canvas.getContext('webgl2', {\n      alpha: true,\n      antialias: true,\n      premultipliedAlpha: false,\n      preserveDrawingBuffer: true,\n    });\n    if (!gl) throw new Error('CueFrame component renderer does not provide WebGL2');\n\n    const compile = (type: number, source: string) => {\n      const shader = gl.createShader(type);\n      if (!shader) throw new Error('Could not allocate WarpText shader');\n      gl.shaderSource(shader, source);\n      gl.compileShader(shader);\n      if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) {\n        throw new Error(`WarpText shader compile failed: ${gl.getShaderInfoLog(shader) ?? 'unknown error'}`);\n      }\n      return shader;\n    };\n\n    const program = gl.createProgram();\n    if (!program) throw new Error('Could not allocate WarpText program');\n    gl.attachShader(program, compile(gl.VERTEX_SHADER, vertex));\n    gl.attachShader(program, compile(gl.FRAGMENT_SHADER, fragment));\n    gl.linkProgram(program);\n    if (!gl.getProgramParameter(program, gl.LINK_STATUS)) {\n      throw new Error(`WarpText program link failed: ${gl.getProgramInfoLog(program) ?? 'unknown error'}`);\n    }\n    gl.useProgram(program);\n\n    const vertices = new Float32Array([-1, -1, 0, 0, 3, -1, 2, 0, -1, 3, 0, 2]);\n    const buffer = gl.createBuffer();\n    gl.bindBuffer(gl.ARRAY_BUFFER, buffer);\n    gl.bufferData(gl.ARRAY_BUFFER, vertices, gl.STATIC_DRAW);\n    const position = gl.getAttribLocation(program, 'position');\n    const uv = gl.getAttribLocation(program, 'uv');\n    gl.enableVertexAttribArray(position);\n    gl.vertexAttribPointer(position, 2, gl.FLOAT, false, 16, 0);\n    gl.enableVertexAttribArray(uv);\n    gl.vertexAttribPointer(uv, 2, gl.FLOAT, false, 16, 8);\n\n    const textCanvas = document.createElement('canvas');\n    textCanvas.width = width;\n    textCanvas.height = height;\n    const context = textCanvas.getContext('2d');\n    if (!context) throw new Error('Could not allocate WarpText raster canvas');\n    context.clearRect(0, 0, width, height);\n    context.fillStyle = color;\n    context.textAlign = 'right';\n    context.textBaseline = 'alphabetic';\n    context.font = '800 148px \"Bricolage Grotesque\", Inter, sans-serif';\n    const lines = text.split('\\n');\n    lines.forEach((line, index) => {\n      const y = 420 + index * 146;\n      context.fillText(line, width - 130, y);\n    });\n\n    const texture = gl.createTexture();\n    gl.activeTexture(gl.TEXTURE0);\n    gl.bindTexture(gl.TEXTURE_2D, texture);\n    gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);\n    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);\n    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);\n    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);\n    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);\n    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, textCanvas);\n\n    const uniform = (name: string) => gl.getUniformLocation(program, name);\n    gl.uniform1i(uniform('uTextTexture'), 0);\n    gl.uniform2f(uniform('uResolution'), width, height);\n    // Keep the ambient texture restrained, then make the localized pointer\n    // deformation do the visual work. Strong refraction reads as RGB glitching\n    // once exported; the reference effect is primarily a spatial bend.\n    gl.uniform1f(uniform('uWarpStrength'), 0.035);\n    gl.uniform1f(uniform('uWarpScale'), 1.7);\n    gl.uniform1f(uniform('uSpeed'), 0.55);\n    gl.uniform1f(uniform('uPointerInfluence'), 0.24);\n    gl.uniform1f(uniform('uPointerStrength'), 1.18);\n    gl.uniform1f(uniform('uRefraction'), 0.004);\n    gl.uniform1f(uniform('uRipple'), 0.72);\n    gl.uniform1f(uniform('uMotion'), 1);\n    gl.clearColor(0, 0, 0, 0);\n    gl.viewport(0, 0, width, height);\n    runtimeRef.current = { gl, program, uniform };\n\n    return () => {\n      runtimeRef.current = null;\n      gl.getExtension('WEBGL_lose_context')?.loseContext();\n    };\n  }, [color, height, text, width]);\n\n  useLayoutEffect(() => {\n    const runtime = runtimeRef.current;\n    if (!runtime) return;\n    const { gl, program, uniform } = runtime;\n    gl.useProgram(program);\n\n    const progressThroughClip = frame / Math.max(1, durationInFrames - 1);\n    const opacity = interpolate(\n      progressThroughClip,\n      [0.12, 0.22, 0.86, 1],\n      [0, 1, 1, 0],\n      {\n      extrapolateLeft: 'clamp',\n      extrapolateRight: 'clamp',\n      },\n    );\n    // A deliberate pointer gesture across the title. The visual is produced by\n    // WarpText's localized bulge/ripple/refraction, not by a sweep overlay.\n    const progress = smooth((progressThroughClip - 0.20) / 0.48);\n    const active = smooth((progressThroughClip - 0.18) / 0.04) *\n      (1 - smooth((progressThroughClip - 0.69) / 0.06));\n    const pointerX = 0.40 + progress * 0.62;\n    const pointerY = 0.535;\n\n    gl.uniform2f(uniform('uPointer'), pointerX, pointerY);\n    gl.uniform1f(uniform('uPointerActive'), 0.18 + clamp(active) * 0.82);\n    gl.uniform1f(uniform('uTime'), progressThroughClip * 8);\n    gl.uniform1f(uniform('uOpacity'), opacity);\n    gl.clear(gl.COLOR_BUFFER_BIT);\n    gl.drawArrays(gl.TRIANGLES, 0, 3);\n    gl.finish();\n  }, [durationInFrames, frame]);\n\n  return <canvas ref={canvasRef} width={width} height={height} style={{ position: 'absolute', inset: 0, width, height }} />;\n}\n\nexport default function YosemiteWarpTitle({\n  durationInFrames,\n  params,\n}: {\n  durationInFrames: number;\n  params: Record<string, unknown>;\n}) {\n  const frame = useCurrentFrame();\n  const text = typeof params.text === 'string' ? params.text : 'CARVED BY\\nWATER';\n  const color = typeof params.color === 'string' ? params.color : '#eba61f';\n  const progressThroughClip = frame / Math.max(1, durationInFrames - 1);\n  const detailOpacity = interpolate(progressThroughClip, [0.24, 0.34, 0.86, 1], [0, 1, 1, 0], {\n    extrapolateLeft: 'clamp', extrapolateRight: 'clamp',\n  });\n\n  return (\n    <AbsoluteFill style={{ backgroundColor: 'transparent', fontFamily: 'Bricolage Grotesque, Inter, sans-serif' }}>\n      <WarpCanvas text={text} color={color} />\n      <div style={{ position: 'absolute', left: 1118, top: 650, width: 672, opacity: detailOpacity }}>\n        <div style={{ height: 3, background: color }} />\n        <div style={{ marginTop: 28, color: '#f7f1e6', fontSize: 29, fontWeight: 600, letterSpacing: 2 }}>ONE CANVAS · HUMAN + AGENT</div>\n        <div style={{ marginTop: 14, color: '#e8d6bf', fontSize: 22, letterSpacing: 1.7 }}>BUILT IN CUEFRAME</div>\n      </div>\n      <div style={{ position: 'absolute', left: 112, top: 84, color, fontSize: 21, fontWeight: 600, letterSpacing: 5, opacity: detailOpacity }}>\n        YOSEMITE // UPPER FALLS\n      </div>\n      <div style={{ position: 'absolute', right: 112, top: 84, display: 'flex', alignItems: 'center', gap: 22, color, opacity: detailOpacity }}>\n        <span style={{ fontSize: 17, fontWeight: 600, letterSpacing: 3 }}>01 / 06</span>\n        <span style={{ width: 22, height: 22, borderRadius: 999, background: color }} />\n      </div>\n      <CueFrameLogo opacity={detailOpacity} />\n    </AbsoluteFill>\n  );\n}\n",
+          "manifest": {
+            "version": 2,
+            "assets": {},
+            "graphics": {
+              "api": "webgl2",
+              "required": true,
+              "accelerationPreference": "software-allowed"
+            },
+            "alphaPolicy": "requires-transparency"
+          }
+        }
+      }
+    }
+  },
+  "recipe": {
+    "schemaVersion": 1,
+    "slug": "yosemite-warp-text",
+    "mediaSlots": [
+      {
+        "id": "source",
+        "projectMediaId": "recipe-media-yosemite-warp-text",
+        "label": "Yosemite Upper Falls source",
+        "kind": "video"
+      }
+    ],
+    "components": [
+      {
+        "componentId": "yosemite-warp-title",
+        "name": "Yosemite Warp Title",
+        "category": "text",
+        "sourceVersionId": "6c88e26e2f3c67f4bd7380a4bb07c23f5b55706af939ae0cbd1938e6d2f543d9"
+      }
+    ],
+    "cloudBrandKit": {
+      "kitId": "cueframe-recipes-carved-by-water",
+      "name": "Carved by water",
+      "description": "Warm editorial color and oversized amber typography.",
+      "colors": {
+        "primary": "#eba61f",
+        "secondary": "#f7f1e6",
+        "accent": "#eba61f",
+        "background": "#0a0a0a",
+        "text": "#f7f1e6"
+      },
+      "headingFont": {
+        "fontFamily": "Bricolage Grotesque",
+        "fontWeight": 650
+      },
+      "bodyFont": {
+        "fontFamily": "Inter",
+        "fontWeight": 500
+      }
+    }
+  }
+}

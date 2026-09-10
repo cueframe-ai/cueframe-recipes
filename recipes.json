@@ -1,0 +1,47 @@
+{
+  "schemaVersion": 1,
+  "recipes": [
+    {
+      "slug": "yosemite-warp-text",
+      "title": "Carved by water",
+      "category": "Motion design",
+      "format": "16:9",
+      "duration": "8 seconds",
+      "render": "https://cueframe.ai/demo/yosemite-warp-text.mp4",
+      "poster": "https://cueframe.ai/showcase/yosemite-poster.jpg",
+      "description": "An oversized moving title meets the scale of Yosemite Falls.",
+      "transcriptExcerpt": null,
+      "details": [
+        "Custom animated typography",
+        "Cinematic color",
+        "Ambient sound"
+      ],
+      "prompt": "Make an 8-second landscape film using waterfall footage. Use oversized amber typography reading “Carved by water”, a restrained cinematic grade, and natural ambient sound. Keep the title, footage, and sound independently editable. Use my footage if I supply it; otherwise help me find suitable licensed footage.",
+      "recipe": "https://github.com/cueframe-ai/cueframe-recipes/tree/main/yosemite-warp-text",
+      "projectTemplate": "https://raw.githubusercontent.com/cueframe-ai/cueframe-recipes/main/yosemite-warp-text/recipe.cueframe"
+    },
+    {
+      "slug": "yosemite-peregrines",
+      "title": "Yosemite Peregrines",
+      "category": "Spoken stories",
+      "format": "16:9",
+      "duration": "10 seconds",
+      "render": "https://cueframe.ai/demo/yosemite-peregrines-phenomenal.mp4",
+      "poster": "https://cueframe.ai/showcase/yosemite-peregrines-phenomenal-poster.jpg",
+      "description": "A Yosemite ranger's awe lands with one restrained editorial title and word-timed captions.",
+      "transcriptExcerpt": "It’s just phenomenal how unbelievably fast they are when they’re in that perfect tuck or stoop, as biologists call it, in the dive.",
+      "details": [
+        "Subject-aware editorial title",
+        "Word-timed captions",
+        "Original spoken audio"
+      ],
+      "prompt": "Turn a strong 10-second talking-head quote into a cinematic landscape edit. Keep the speaker and any source lower-third fully visible, place one restrained title behind the subject, add accurate word-timed captions above the bottom safe area, preserve the original voice, and use my brand kit for the logo and caption accents.",
+      "recipe": "https://github.com/cueframe-ai/cueframe-recipes/tree/main/yosemite-peregrines",
+      "projectTemplate": "https://raw.githubusercontent.com/cueframe-ai/cueframe-recipes/main/yosemite-peregrines/recipe.cueframe",
+      "original": {
+        "label": "National Park Service: Peregrine Falcons in Yosemite",
+        "href": "https://www.nps.gov/media/video/view.htm?id=53135a56-4998-4d6e-b26d-24fe0acca1c3"
+      }
+    }
+  ]
+}

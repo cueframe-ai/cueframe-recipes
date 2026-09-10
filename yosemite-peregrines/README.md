@@ -5,7 +5,7 @@ talking-head beat. `PHENOMENAL` spans most of the frame as the ranger says the
 word, while CueFrame's subject matte keeps his face and shoulders cleanly in
 front. The original spoken audio remains intact.
 
-[Watch the finished CueFrame render](https://cueframe.ai/demo/yosemite-peregrines.mp4).
+[Watch the finished CueFrame render](https://cueframe.ai/demo/yosemite-peregrines-phenomenal.mp4).
 
 It exercises the same shared project from both sides:
 
@@ -16,30 +16,45 @@ It exercises the same shared project from both sides:
 ## Reproduce it
 
 The source video is not copied into this repository. Obtain the official
-National Park Service source through a method its publisher permits, then upload
-the full-resolution file. The recipe uses source time `83.616-93.359` seconds.
+National Park Service source through a method its publisher permits. The recipe
+uses source time `83.616-93.359` seconds.
+
+Use the CueFrame surface you already work in. Every path starts from the same
+[`recipe.cueframe`](./recipe.cueframe) project template in this repository.
+
+### CLI
 
 ```bash
-cd cueframe-recipes/yosemite-peregrines
-
-# Upload the full 1920x1080 source and retain mediaItemId from the JSON output.
-npx -y cueframe upload ./yosemite-peregrines.mp4 --json
-
-# Create the sample brand kit through the typed API surface and retain its id.
-npx -y cueframe api POST /v1/brand-kits -b @brand-kit.json --json
-
-# Keep the tracked recipe clean while inserting your returned media id.
-cp composition.template.json composition.json
-# Replace the single REPLACE_WITH_MEDIA_ID value in composition.json.
-
-npx -y cueframe project create -n "Yosemite Peregrines" -a 16:9 \
-  --brand-kit <brandKitId> --json
-
-# Validate the authored body before export.
-npx -y cueframe composition validate -b @composition.json
-npx -y cueframe composition put <projectId> -b @composition.json --force
-npx -y cueframe render <projectId> -o yosemite-peregrines.mp4 --json
+npx -y cueframe recipe run yosemite-peregrines \
+  --media ./yosemite-peregrines.mp4 \
+  --out ./yosemite-peregrines-render.mp4
 ```
+
+This downloads the canonical project template from `cueframe-recipes`, uploads
+the source, creates the editable cloud project, validates it, and renders the
+MP4. Add `--no-render` when you only want the editable project.
+
+### Desktop app
+
+Download and open [`recipe.cueframe`](./recipe.cueframe). CueFrame asks you to
+locate the missing source footage, then opens the same editable composition,
+captions, title, and brand settings shown in the finished render.
+
+The project file includes CueFrame's prepared packed matte for this exact trim,
+so the source video is the only additional file you need to choose. The small
+derived matte contains transparency data, not a second copy of the footage.
+
+### MCP
+
+Give your CueFrame-connected agent the recipe slug and source, then ask:
+
+> Apply `yosemite-peregrines` from `cueframe-ai/cueframe-recipes` to my source.
+> Keep the project editable and render it after previewing the subject-aware
+> title.
+
+The agent resolves the same `recipe.cueframe` artifact and uses the normal media,
+project, validation, preview, and render tools. It does not reconstruct the
+composition from prose.
 
 The title is a `heroText` overlay on the `behind-subject` depth plane. One video
 clip carries the complete `83.616-93.359` source window; the renderer binds the
@@ -51,22 +66,6 @@ pre-rendered title, media-keyed clip id, or split-clip workaround.
 The project brand kit supplies the official CueFrame mark and caption profile.
 The title binds its ink and Instrument Serif face through `$brand:` tokens, so
 logo, title, and captions all follow the project kit at render time.
-
-## App, CLI, and MCP workflow
-
-- **The app can reproduce the recipe for you.** Upload the source, open a new
-  project, then ask the Director: `Apply the yosemite-peregrines recipe from
-  cueframe-ai/cueframe-recipes using my uploaded Yosemite source.` The Director
-  loads the canonical GitHub composition, maps the media placeholder, validates
-  it, and compares the saved project to the recipe before previewing it.
-- **CLI creates the exact base.** Upload the source, replace the media-id
-  placeholder, validate the JSON, and put it on the new project with the
-  commands above.
-- **MCP prepares and verifies depth.** Ask an MCP-connected agent to prepare a
-  `matte` for source window `84.816-87.566`, poll `get_media_facts` until the
-  exact result is `ready`, then use `preview_frame` on the persisted composition.
-  The agent can patch the same clips with `apply_composition`, score the result,
-  and call `create_render` only after review.
 
 ## Quality bar
 
