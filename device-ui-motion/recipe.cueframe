@@ -1,0 +1,1614 @@
+{
+  "version": 4,
+  "id": "recipe-device-ui-motion",
+  "name": "Device UI Motion",
+  "createdAt": 0,
+  "modifiedAt": 0,
+  "composition": {
+    "v": 1,
+    "format": {
+      "aspectRatio": "16:9",
+      "fps": 60,
+      "resolution": "hd"
+    },
+    "tracks": [
+      {
+        "id": "device-ui",
+        "kind": "overlay",
+        "name": "Device UI showcase",
+        "contents": [
+          {
+            "id": "device-ui-showcase",
+            "kind": "overlay",
+            "startTime": 0,
+            "duration": 15.166666666666666,
+            "source": {
+              "kind": "component",
+              "componentId": "device-ui-motion",
+              "props": {
+                "shot": "film",
+                "componentRef": {
+                  "version": 1,
+                  "sourceVersionId": "9e0690acfc521e4f91bb86cc7e0430e05db4d4541b649fe527f3e8be8d0055f2"
+                }
+              },
+              "assets": {
+                "model": "recipe-media-device-ui-model"
+              },
+              "zPlane": "front"
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "pool": [
+    {
+      "id": "recipe-media-device-ui-model",
+      "name": "Baked device mesh.svg",
+      "kind": "image",
+      "filePath": null,
+      "cloud": null
+    }
+  ],
+  "authoredComponents": {
+    "device-ui-motion": {
+      "headVersionId": "9e0690acfc521e4f91bb86cc7e0430e05db4d4541b649fe527f3e8be8d0055f2",
+      "versions": {
+        "9e0690acfc521e4f91bb86cc7e0430e05db4d4541b649fe527f3e8be8d0055f2": {
+          "version": 2,
+          "componentId": "device-ui-motion",
+          "tsxSource": "// src/Showcase.jsx\nimport React4, { useMemo as useMemo4 } from \"react\";\nimport { AbsoluteFill, useVideoConfig } from \"remotion\";\nimport { ThreeCanvas } from \"@remotion/three\";\n\n// src/render/DeviceScene.jsx\nimport React3, { useMemo as useMemo3, useLayoutEffect as useLayoutEffect3 } from \"react\";\nimport { useLoader, useThree } from \"@react-three/fiber\";\nimport * as THREE4 from \"three\";\nimport { FrameDepthOfField } from \"@cueframe/animate\";\n\n// src/core/device-core.mjs\nvar add = (a, b) => a.map((v, i) => v + b[i]);\nvar sub = (a, b) => a.map((v, i) => v - b[i]);\nvar mul = (a, n) => a.map((v) => v * n);\nvar dot = (a, b) => a.reduce((s, v, i) => s + v * b[i], 0);\nvar cross = (a, b) => [\n  a[1] * b[2] - a[2] * b[1],\n  a[2] * b[0] - a[0] * b[2],\n  a[0] * b[1] - a[1] * b[0]\n];\nvar length = (a) => Math.sqrt(dot(a, a));\nfunction requireValue(ok, message) {\n  if (!ok) throw new Error(message);\n}\nfunction finiteVector(v, size, label) {\n  requireValue(\n    Array.isArray(v) && v.length === size && v.every(Number.isFinite),\n    label + \" must contain \" + size + \" finite numbers\"\n  );\n  return v;\n}\nfunction meshBounds(mesh) {\n  const min = [Infinity, Infinity, Infinity], max = [-Infinity, -Infinity, -Infinity];\n  mesh.positions.forEach((v, i) => {\n    min[i % 3] = Math.min(min[i % 3], v);\n    max[i % 3] = Math.max(max[i % 3], v);\n  });\n  return { min, max, size: sub(max, min), center: mul(add(min, max), 0.5) };\n}\nfunction parseModel(raw) {\n  let text = raw.trim();\n  if (text.startsWith(\"<\")) {\n    const match = text.match(\n      /<metadata\\s+id=\"mesh-data\">([\\s\\S]*?)<\\/metadata>/\n    );\n    requireValue(\n      match,\n      \"Only JSON or the legacy SVG mesh-data envelope is supported; convert GLB/USD with a format-aware importer\"\n    );\n    text = match[1];\n  }\n  let model;\n  try {\n    model = JSON.parse(text);\n  } catch {\n    throw new Error(\n      \"Invalid mesh JSON; GLB/USD/OBJ are not supported directly\"\n    );\n  }\n  validateModel(model);\n  return model;\n}\nfunction validateModel(model) {\n  requireValue(\n    model && Array.isArray(model.meshes) && model.meshes.length > 0,\n    \"model.meshes must be nonempty\"\n  );\n  requireValue(\n    typeof model.units === \"string\" && model.units.length > 0,\n    \"Declare model.units\"\n  );\n  const names = /* @__PURE__ */ new Set();\n  for (const mesh of model.meshes) {\n    requireValue(\n      typeof mesh.name === \"string\" && mesh.name && !names.has(mesh.name),\n      \"Mesh names must be nonempty and unique\"\n    );\n    names.add(mesh.name);\n    requireValue(\n      Array.isArray(mesh.positions) && mesh.positions.length >= 9 && mesh.positions.length % 3 === 0 && mesh.positions.every(Number.isFinite),\n      mesh.name + \": invalid positions\"\n    );\n    requireValue(\n      Array.isArray(mesh.indices) && mesh.indices.length >= 3 && mesh.indices.length % 3 === 0 && mesh.indices.every(\n        (i) => Number.isInteger(i) && i >= 0 && i < mesh.positions.length / 3\n      ),\n      mesh.name + \": invalid triangle indices\"\n    );\n    for (const [key, stride] of [\n      [\"uv\", 2],\n      [\"normals\", 3]\n    ]) {\n      if (mesh[key] !== void 0)\n        requireValue(\n          Array.isArray(mesh[key]) && mesh[key].length === mesh.positions.length / 3 * stride && mesh[key].every(Number.isFinite),\n          mesh.name + \": invalid \" + key\n        );\n    }\n    requireValue(\n      mesh.matrix === void 0 && mesh.transform === void 0 && mesh.children === void 0,\n      \"Unbaked transforms/hierarchy: flatten with a format-aware importer first\"\n    );\n  }\n}\nfunction normalizeModel(model, adapter) {\n  validateModel(model);\n  requireValue(\n    adapter && (model.coordinateSpace === \"baked\" || adapter.confirmBaked === true),\n    \"Confirm all mesh positions share a baked model coordinate space\"\n  );\n  const right = finiteVector(adapter.right, 3, \"adapter.right\");\n  const up = finiteVector(adapter.up, 3, \"adapter.up\");\n  const normal = finiteVector(adapter.normal, 3, \"adapter.normal\");\n  requireValue(\n    [right, up, normal].every((v) => Math.abs(length(v) - 1) < 1e-6) && Math.abs(dot(right, up)) < 1e-6 && length(sub(cross(right, up), normal)) < 1e-6,\n    \"Adapter basis must be orthonormal and right-handed\"\n  );\n  requireValue(\n    model.meshes.some((m) => m.name === adapter.displayMesh),\n    \"Named display mesh not found\"\n  );\n  const project = (p) => [dot(p, right), dot(p, up), dot(p, normal)];\n  const meshes = model.meshes.map((mesh) => {\n    const positions = [], normals = mesh.normals ? [] : void 0;\n    for (let i = 0; i < mesh.positions.length; i += 3)\n      positions.push(...project(mesh.positions.slice(i, i + 3)));\n    if (normals)\n      for (let i = 0; i < mesh.normals.length; i += 3)\n        normals.push(\n          ...mul(\n            project(mesh.normals.slice(i, i + 3)),\n            adapter.flipWinding ? -1 : 1\n          )\n        );\n    const indices = [...mesh.indices];\n    if (adapter.flipWinding)\n      for (let i = 0; i < indices.length; i += 3)\n        [indices[i + 1], indices[i + 2]] = [indices[i + 2], indices[i + 1]];\n    return { ...mesh, positions, indices, ...normals ? { normals } : {} };\n  });\n  return { ...model, coordinateSpace: \"baked\", meshes };\n}\nfunction displaySurface(model, displayMesh, pixelWidth = 1200, clearancePixels = 2) {\n  requireValue(\n    Number.isFinite(pixelWidth) && pixelWidth > 0,\n    \"pixelWidth must be positive\"\n  );\n  requireValue(\n    Number.isFinite(clearancePixels) && clearancePixels > 0,\n    \"clearancePixels must be positive\"\n  );\n  const mesh = model.meshes.find((m) => m.name === displayMesh);\n  requireValue(mesh, \"Display mesh missing\");\n  const bounds = meshBounds(mesh), [w, h, d] = bounds.size;\n  requireValue(\n    w > 0 && h > 0 && d <= Math.max(w, h) * 1e-6,\n    \"Display must be planar in the adapter basis; curved screens need a custom surface adapter\"\n  );\n  let area = 0;\n  for (let i = 0; i < mesh.indices.length; i += 3) {\n    const p = mesh.indices.slice(i, i + 3).map((n) => mesh.positions.slice(n * 3, n * 3 + 3));\n    area += cross(sub(p[1], p[0]), sub(p[2], p[0]))[2] / 2;\n  }\n  requireValue(\n    area > w * h * 1e-8,\n    \"Display triangle winding faces away from +normal or has zero area; inspect conversion before using flipWinding\"\n  );\n  const unit = w / pixelWidth;\n  return {\n    mesh,\n    bounds,\n    unit,\n    width: pixelWidth,\n    height: h / unit,\n    glassZ: bounds.max[2],\n    z: bounds.max[2] + clearancePixels * unit,\n    origin: [\n      bounds.center[0],\n      bounds.center[1],\n      bounds.max[2] + clearancePixels * unit\n    ]\n  };\n}\nfunction onDisplay(surface, x, y) {\n  const p = [\n    surface.origin[0] + (x - surface.width / 2) * surface.unit,\n    surface.origin[1] + (surface.height / 2 - y) * surface.unit\n  ];\n  const mesh = surface.mesh;\n  for (let i = 0; i < mesh.indices.length; i += 3) {\n    const v = mesh.indices.slice(i, i + 3).map((k) => mesh.positions.slice(k * 3, k * 3 + 2));\n    const area = (v[1][0] - v[0][0]) * (v[2][1] - v[0][1]) - (v[1][1] - v[0][1]) * (v[2][0] - v[0][0]);\n    if (Math.abs(area) < 1e-12) continue;\n    const signs = v.map((a, j) => {\n      const b = v[(j + 1) % 3];\n      return (b[0] - a[0]) * (p[1] - a[1]) - (b[1] - a[1]) * (p[0] - a[0]);\n    });\n    if (signs.every((s) => s >= -1e-9) || signs.every((s) => s <= 1e-9))\n      return true;\n  }\n  return false;\n}\nfunction centerIn(box, width, height, z = 0) {\n  return [\n    box.x + box.width / 2 - width / 2,\n    height / 2 - box.y - box.height / 2,\n    z\n  ];\n}\nfunction rotate(v, [x, y, z]) {\n  let [a, b, c] = v;\n  [a, b] = [\n    a * Math.cos(z) - b * Math.sin(z),\n    a * Math.sin(z) + b * Math.cos(z)\n  ];\n  [a, c] = [\n    a * Math.cos(y) + c * Math.sin(y),\n    -a * Math.sin(y) + c * Math.cos(y)\n  ];\n  [b, c] = [\n    b * Math.cos(x) - c * Math.sin(x),\n    b * Math.sin(x) + c * Math.cos(x)\n  ];\n  return [a, b, c];\n}\n\n// src/core/motion.mjs\nvar ease = (x) => {\n  const t = Math.max(0, Math.min(1, x));\n  return t * t * (3 - 2 * t);\n};\nvar enter = (f, a, b) => ease((f - a) / (b - a));\nfunction iconEase(progress) {\n  if (progress <= 0) return 0;\n  if (progress >= 1) return 1;\n  let lo = 0, hi = 1;\n  for (let i = 0; i < 32; i++) {\n    const t = (lo + hi) / 2, s = 1 - t;\n    const x = 3 * s * s * t * 0.23 + 3 * s * t * t * 0.32 + t * t * t;\n    if (x < progress) lo = t;\n    else hi = t;\n  }\n  return 1 - (1 - (lo + hi) / 2) ** 3;\n}\nvar revealIcon = (frame, start, end) => iconEase((frame - start) / (end - start));\nfunction cameraTrack(keys, frame) {\n  if (frame <= keys[0][0]) return keys[0].slice(1);\n  if (frame >= keys[keys.length - 1][0]) return keys[keys.length - 1].slice(1);\n  const i = keys.findIndex((key) => key[0] >= frame);\n  const a = keys[i - 1], b = keys[i], h = b[0] - a[0], t = (frame - a[0]) / h;\n  const tangent = (k, axis) => {\n    if (k === 0 || k === keys.length - 1) return 0;\n    const prev = keys[k - 1], here = keys[k], next = keys[k + 1];\n    const h0 = here[0] - prev[0], h1 = next[0] - here[0];\n    const d0 = (here[axis] - prev[axis]) / h0, d1 = (next[axis] - here[axis]) / h1;\n    if (d0 * d1 <= 0) return 0;\n    const w0 = 2 * h1 + h0, w1 = h1 + 2 * h0;\n    return (w0 + w1) / (w0 / d0 + w1 / d1);\n  };\n  return a.slice(1).map((v, j) => {\n    const axis = j + 1, t2 = t * t, t3 = t2 * t;\n    return (2 * t3 - 3 * t2 + 1) * v + (t3 - 2 * t2 + t) * h * tangent(i - 1, axis) + (-2 * t3 + 3 * t2) * b[axis] + (t3 - t2) * h * tangent(i, axis);\n  });\n}\nfunction measuredTrack(keys, frame) {\n  if (frame <= keys[0][0]) return keys[0].slice(1);\n  for (let i = 1; i < keys.length; i++)\n    if (frame <= keys[i][0]) {\n      const a = keys[i - 1], b = keys[i], u = (frame - a[0]) / (b[0] - a[0]);\n      return b.slice(1).map((v, j) => a[j + 1] + (v - a[j + 1]) * u);\n    }\n  return keys[keys.length - 1].slice(1);\n}\nfunction controlWorld(surface, box, z, rotation) {\n  return rotate(\n    add(\n      surface.origin,\n      mul(centerIn(box, surface.width, surface.height, z), surface.unit)\n    ),\n    rotation\n  );\n}\nfunction screenUv(surface, x, y) {\n  return [\n    (x - surface.bounds.min[0]) / surface.bounds.size[0],\n    (y - surface.bounds.min[1]) / surface.bounds.size[1]\n  ];\n}\nfunction cameraFit(surface, state, config) {\n  if (state.diagnostic)\n    return [\n      0,\n      0,\n      surface.bounds.size[1] / (2 * Math.tan(config.camera.fov / 2 * Math.PI / 180) * 0.82)\n    ];\n  const box = state.focus.box, z = config.camera.anchorDepth;\n  const center = controlWorld(surface, box, z, state.rotation);\n  const r = box.height / 2;\n  const corners = Array.from({ length: 64 }, (_, i) => {\n    const a = i / 64 * Math.PI * 2;\n    const x = box.x + (Math.cos(a) < 0 ? r : box.width - r) + Math.cos(a) * r, y = box.y + r + Math.sin(a) * r;\n    return rotate(\n      add(\n        surface.origin,\n        mul([x - surface.width / 2, surface.height / 2 - y, z], surface.unit)\n      ),\n      state.rotation\n    );\n  });\n  const k = Math.tan(config.camera.fov / 2 * Math.PI / 180), aspect = config.picture.aspect;\n  let distance = box.width * surface.unit / (2 * k * aspect * state.target[2]), camera = [center[0], center[1], center[2] + distance];\n  for (let iteration = 0; iteration < 15; iteration++) {\n    const pixels = corners.map((p) => [\n      0.5 + (p[0] - camera[0]) / (2 * (camera[2] - p[2]) * k * aspect),\n      0.5 - (p[1] - camera[1]) / (2 * (camera[2] - p[2]) * k)\n    ]);\n    const min = [0, 1].map((i) => Math.min(...pixels.map((p) => p[i]))), max = [0, 1].map((i) => Math.max(...pixels.map((p) => p[i])));\n    const measured = [\n      (min[0] + max[0]) / 2,\n      (min[1] + max[1]) / 2,\n      max[0] - min[0]\n    ];\n    camera[0] += (measured[0] - state.target[0]) * 2 * distance * k * aspect;\n    camera[1] -= (measured[1] - state.target[1]) * 2 * distance * k;\n    distance *= measured[2] / state.target[2];\n    camera[2] = center[2] + distance;\n  }\n  return camera;\n}\n\n// src/core/materials.mjs\nfunction glassLayers(glass) {\n  const top = glass.depth + 2 * glass.bevel;\n  return {\n    back: 0,\n    depth: glass.depth,\n    bevel: glass.bevel,\n    face: top + glass.faceGap,\n    selection: top + glass.faceGap + glass.selectionGap,\n    icon: top + glass.faceGap + glass.selectionGap + glass.iconGap\n  };\n}\n\n// src/render/textures.mjs\nimport * as THREE from \"three\";\nfunction round(ctx, x, y, w, h, r) {\n  ctx.beginPath();\n  ctx.roundRect(x, y, w, h, r);\n}\nfunction texture(canvas) {\n  const t = new THREE.CanvasTexture(canvas);\n  t.colorSpace = THREE.SRGBColorSpace;\n  t.anisotropy = 16;\n  return t;\n}\n\n// src/render/GlassControls.jsx\nimport React2, { useMemo as useMemo2, useLayoutEffect as useLayoutEffect2 } from \"react\";\nimport * as THREE3 from \"three\";\n\n// src/render/GlassSurface.jsx\nimport React, { useMemo, useLayoutEffect } from \"react\";\nimport * as THREE2 from \"three\";\nvar vertexShader = `\nvarying vec2 vLocal;\nvarying vec3 vViewPosition;\nvarying vec3 vRight;\nvarying vec3 vUp;\nvarying vec3 vNormal;\nvoid main(){\n vLocal=position.xy;\n vec4 p=modelViewMatrix*vec4(position,1.0);\n vViewPosition=p.xyz;\n vRight=normalize(mat3(modelViewMatrix)*vec3(1.,0.,0.));\n vUp=normalize(mat3(modelViewMatrix)*vec3(0.,1.,0.));\n vNormal=normalize(normalMatrix*vec3(0.,0.,1.));\n gl_Position=projectionMatrix*p;\n}`;\nvar fragmentShader = `\nuniform sampler2D uScreen;\nuniform sampler2D uFrostedScreen;\nuniform vec2 uSize;\nuniform vec2 uScreenSize;\nuniform vec2 uCenter;\nuniform vec2 uScale;\nuniform float uFrost;\nuniform float uReveal;\nuniform float uFrame;\nuniform float uLift;\nuniform float uRimStrength;\nuniform float uFormedRimStrength;\nuniform float uBevelWidth;\nuniform float uBackdropStrength;\nvarying vec2 vLocal;\nvarying vec3 vViewPosition;\nvarying vec3 vRight;\nvarying vec3 vUp;\nvarying vec3 vNormal;\nfloat sdf(vec2 p){\n float r=uSize.y*.5;\n vec2 q=abs(p)-(uSize*.5-vec2(r));\n return length(max(q,0.))+min(max(q.x,q.y),0.)-r;\n}\nvoid main(){\n float d=sdf(vLocal);\n float aa=max(fwidth(d),.35);\n float mask=1.-smoothstep(-aa,aa,d);\n if(mask<.01)discard;\n vec3 eye=normalize(-vViewPosition);\n // Project the viewing ray down to the native display. Sampling straight down\n // duplicates text at oblique angles because the glass face is above the UI.\n float viewZ=max(.05,dot(eye,normalize(vNormal)));\n vec2 rayOffset=vec2(-dot(eye,normalize(vRight)),dot(eye,normalize(vUp)))*uLift/viewZ;\n vec2 px=uCenter+vec2(vLocal.x,-vLocal.y)*uScale+rayOffset;\n vec2 uv=vec2(px.x/uScreenSize.x,1.-px.y/uScreenSize.y);\n // Pre-filter the app in its own pixel grid; sparse large-radius taps produced\n // repeated text ghosts. Only this masked face samples the Gaussian texture.\n vec3 under=mix(texture2D(uScreen,uv).rgb,texture2D(uFrostedScreen,uv).rgb,uFrost);\n vec2 grad=normalize(vec2(sdf(vLocal+vec2(.5,0.))-sdf(vLocal-vec2(.5,0.)),sdf(vLocal+vec2(0.,.5))-sdf(vLocal-vec2(0.,.5)))+vec2(.00001));\n float bevel=1.-smoothstep(0.,uBevelWidth,-d);\n vec3 normal=normalize(vNormal*.72+(vRight*grad.x+vUp*grad.y)*bevel);\n // A broad studio light, expressed in view space; highlights respond to pose.\n vec3 light=normalize(vec3(-.65+.14*sin(uFrame*.003),.85,1.2));\n vec3 halfVector=normalize(light+eye);\n float broad=pow(max(dot(normal,halfVector),0.),20.);\n float fine=pow(max(dot(normal,halfVector),0.),85.);\n float fresnel=pow(1.-max(dot(normal,eye),0.),3.);\n float rim=exp(-pow((d+1.5)/1.2,2.));\n float lowerLip=exp(-pow((d+5.5)/2.2,2.));\n float gradient=.006+.005*(vLocal.y/uSize.y+.5);\n vec3 body=under*uBackdropStrength+vec3(gradient);\n body+=vec3(.028,.030,.034)*broad*uFrost;\n body+=vec3(.10,.105,.115)*(fine*.6+fresnel*.25)*bevel;\n body+=vec3(mix(uRimStrength,uFormedRimStrength,uFrost))*rim*(.22+.78*max(dot(normal,light),0.));\n body+=vec3(.018)*lowerLip*fresnel;\n float rimAlpha=clamp(rim*.8+bevel*.12,0.,1.);\n float alpha=mask*uReveal*max(uFrost,rimAlpha);\n gl_FragColor=vec4(body,alpha);\n #include <colorspace_fragment>\n}`;\nfunction GlassSurface({\n  screen,\n  frostedScreen,\n  surface,\n  control,\n  frame,\n  lift,\n  glass\n}) {\n  const b = control.box;\n  const material = useMemo(\n    () => new THREE2.ShaderMaterial({\n      vertexShader,\n      fragmentShader,\n      transparent: true,\n      depthTest: true,\n      depthWrite: false,\n      uniforms: {\n        uScreen: { value: screen },\n        uFrostedScreen: { value: frostedScreen },\n        uSize: { value: new THREE2.Vector2(b.width, b.height) },\n        uScreenSize: {\n          value: new THREE2.Vector2(surface.width, surface.height)\n        },\n        uCenter: {\n          value: new THREE2.Vector2(b.x + b.width / 2, b.y + b.height / 2)\n        },\n        uScale: { value: new THREE2.Vector2(1, 1) },\n        uFrost: { value: 1 },\n        uReveal: { value: 1 },\n        uFrame: { value: 0 },\n        uLift: { value: 0 },\n        uRimStrength: { value: 0 },\n        uFormedRimStrength: { value: 0 },\n        uBevelWidth: { value: 0 },\n        uBackdropStrength: { value: 0 }\n      }\n    }),\n    [screen, frostedScreen, surface, b.width, b.height, b.x, b.y]\n  );\n  material.uniforms.uFrost.value = control.frost * glass.frost;\n  material.uniforms.uRimStrength.value = glass.rimStrength;\n  material.uniforms.uFormedRimStrength.value = glass.formedRimStrength;\n  material.uniforms.uBevelWidth.value = glass.bevelWidth;\n  material.uniforms.uBackdropStrength.value = glass.backdropStrength;\n  material.uniforms.uReveal.value = control.reveal;\n  material.uniforms.uFrame.value = frame;\n  material.uniforms.uLift.value = lift;\n  material.uniforms.uScale.value.set(\n    control.scale * control.stretch[0],\n    control.scale * control.stretch[1]\n  );\n  useLayoutEffect(() => () => material.dispose(), [material]);\n  return <mesh\n    name={\"frosted-face:\" + control.id}\n    renderOrder={10}\n    material={material}\n  >\n      <planeGeometry args={[b.width, b.height]} />\n    </mesh>;\n}\n\n// src/core/highlight.mjs\nfunction highlightLayout(width, height, count, config) {\n  if (!Number.isInteger(config.index) || config.index < 0 || config.index >= count)\n    throw Error(\"Navbar highlight index must identify an existing icon\");\n  const cell = width / count;\n  const w = cell - 2 * config.insetX, h = height - 2 * config.insetY;\n  if (w <= 0 || h <= 0) throw Error(\"Navbar highlight insets leave no area\");\n  return {\n    width: w,\n    height: h,\n    x: -width / 2 + cell * (config.index + 0.5),\n    y: 0,\n    radius: config.shape === \"capsule\" ? Math.min(w, h) / 2 : Math.min(config.cornerRadius, w / 2, h / 2)\n  };\n}\nfunction highlightOutline(box, shape) {\n  const { width: w, height: h, radius: r } = box;\n  if (shape === \"ellipse\")\n    return Array.from({ length: 64 }, (_, i) => [\n      Math.cos(i * Math.PI / 32) * w / 2,\n      Math.sin(i * Math.PI / 32) * h / 2\n    ]);\n  return [\n    [w / 2 - r, h / 2 - r, 0],\n    [-w / 2 + r, h / 2 - r, Math.PI / 2],\n    [-w / 2 + r, -h / 2 + r, Math.PI],\n    [w / 2 - r, -h / 2 + r, Math.PI * 1.5]\n  ].flatMap(\n    ([x, y, start]) => Array.from({ length: 17 }, (_, i) => [\n      x + r * Math.cos(start + i * Math.PI / 32),\n      y + r * Math.sin(start + i * Math.PI / 32)\n    ])\n  );\n}\nfunction validateHighlight(width, height, count, config) {\n  const box = highlightLayout(width, height, count, config);\n  const capCenter = (width - height) / 2, radius = height / 2;\n  for (const [px, py] of highlightOutline(box, config.shape)) {\n    const x = px + box.x, nearest = Math.max(-capCenter, Math.min(capCenter, x));\n    if (Math.hypot(x - nearest, py) > radius + 1e-6)\n      throw Error(\n        \"Navbar highlight extends beyond the glass face; increase insets or corner radius\"\n      );\n  }\n  return box;\n}\n\n// src/render/GlassControls.jsx\nfunction SelectionHighlight({ control, layers, config }) {\n  const settings = control.highlight;\n  const box = highlightLayout(\n    control.box.width,\n    control.box.height,\n    control.icons.length,\n    settings\n  );\n  const geometry = useMemo2(\n    () => new THREE3.ShapeGeometry(\n      new THREE3.Shape(\n        highlightOutline(box, settings.shape).map(\n          ([x, y]) => new THREE3.Vector2(x, y)\n        )\n      )\n    ),\n    [box.width, box.height, box.radius, settings.shape]\n  );\n  useLayoutEffect2(() => () => geometry.dispose(), [geometry]);\n  return <mesh\n    name=\"navbar-selection\"\n    geometry={geometry}\n    renderOrder={11}\n    position={[box.x, box.y, layers.selection]}\n  >\n      <meshBasicMaterial\n    color={config.glass.selectionColor}\n    transparent\n    opacity={config.glass.selectionOpacity * control.selectionReveal * control.reveal}\n    depthTest\n    depthWrite={false}\n  />\n    </mesh>;\n}\nfunction drawIcon(ctx, type, style) {\n  ctx.strokeStyle = style.color;\n  ctx.fillStyle = style.color;\n  ctx.lineWidth = style.strokeWidth;\n  ctx.lineCap = \"round\";\n  ctx.lineJoin = \"round\";\n  ctx.beginPath();\n  if (type === \"compose\") {\n    ctx.moveTo(47, 17);\n    ctx.lineTo(29, 17);\n    ctx.quadraticCurveTo(16, 17, 16, 30);\n    ctx.lineTo(16, 75);\n    ctx.quadraticCurveTo(16, 88, 29, 88);\n    ctx.lineTo(74, 88);\n    ctx.quadraticCurveTo(87, 88, 87, 75);\n    ctx.lineTo(87, 54);\n    ctx.stroke();\n    ctx.beginPath();\n    ctx.moveTo(48, 57);\n    ctx.lineTo(89, 16);\n    ctx.stroke();\n  } else if (type === \"search\") {\n    ctx.arc(43, 42, 25, 0, Math.PI * 2);\n    ctx.stroke();\n    ctx.beginPath();\n    ctx.moveTo(62, 62);\n    ctx.lineTo(84, 87);\n    ctx.stroke();\n  } else if (type === \"home\") {\n    ctx.moveTo(11, 43);\n    ctx.quadraticCurveTo(10, 38, 17, 34);\n    ctx.lineTo(45, 13);\n    ctx.quadraticCurveTo(50, 9, 57, 13);\n    ctx.lineTo(84, 31);\n    ctx.quadraticCurveTo(89, 34, 89, 40);\n    ctx.lineTo(89, 83);\n    ctx.quadraticCurveTo(89, 89, 81, 89);\n    ctx.lineTo(63, 89);\n    ctx.lineTo(63, 60);\n    ctx.quadraticCurveTo(63, 55, 57, 55);\n    ctx.lineTo(45, 55);\n    ctx.quadraticCurveTo(39, 55, 39, 61);\n    ctx.lineTo(39, 89);\n    ctx.lineTo(18, 89);\n    ctx.quadraticCurveTo(11, 89, 11, 82);\n    ctx.closePath();\n    ctx.stroke();\n  } else if (type === \"inbox\") {\n    ctx.moveTo(25, 22);\n    ctx.lineTo(75, 22);\n    ctx.lineTo(90, 66);\n    ctx.lineTo(90, 84);\n    ctx.lineTo(10, 84);\n    ctx.lineTo(10, 66);\n    ctx.closePath();\n    ctx.stroke();\n    ctx.beginPath();\n    ctx.moveTo(12, 61);\n    ctx.lineTo(33, 61);\n    ctx.lineTo(40, 73);\n    ctx.lineTo(61, 73);\n    ctx.lineTo(68, 61);\n    ctx.lineTo(87, 61);\n    ctx.stroke();\n  } else if (type === \"focus\") {\n    for (const [x, y, a] of [\n      [29, 25, Math.PI],\n      [73, 25, -Math.PI / 2],\n      [73, 73, 0],\n      [29, 73, Math.PI / 2]\n    ]) {\n      ctx.beginPath();\n      ctx.arc(x, y, 13, a, a + Math.PI / 2);\n      ctx.stroke();\n    }\n    ctx.beginPath();\n    ctx.arc(51, 49, 5, 0, Math.PI * 2);\n    ctx.fill();\n  } else if (type === \"layers\") {\n    ctx.moveTo(19, 38);\n    ctx.lineTo(50, 17);\n    ctx.lineTo(81, 38);\n    ctx.stroke();\n    ctx.beginPath();\n    ctx.moveTo(19, 63);\n    ctx.lineTo(50, 84);\n    ctx.lineTo(81, 63);\n    ctx.stroke();\n  }\n}\nfunction iconMap(type, style) {\n  const c = document.createElement(\"canvas\");\n  c.width = 512;\n  c.height = 512;\n  const ctx = c.getContext(\"2d\");\n  ctx.scale(5.12, 5.12);\n  drawIcon(ctx, type, style);\n  return texture(c);\n}\nfunction Icon({ type, size, x, y, parent, show = 1, selected = true, layers, style }) {\n  const map = useMemo2(\n    () => iconMap(type, style),\n    [type, style.color, style.strokeWidth]\n  );\n  useLayoutEffect2(() => () => map.dispose(), [map]);\n  return <mesh\n    name={\"icon:\" + type}\n    renderOrder={12}\n    position={[x - parent.width / 2, parent.height / 2 - y, layers.icon]}\n  >\n      <planeGeometry args={[size, size]} />\n      <meshBasicMaterial\n    map={map}\n    transparent\n    opacity={show * (selected ? 1 : style.inactiveOpacity)}\n    depthTest\n    depthWrite={false}\n    toneMapped={false}\n  />\n    </mesh>;\n}\nfunction glassGeometry(w, h, layers) {\n  const s = new THREE3.Shape(), r = h / 2 - layers.bevel, c = w / 2 - h / 2;\n  s.moveTo(-c, -r);\n  s.lineTo(c, -r);\n  s.absarc(c, 0, r, -Math.PI / 2, Math.PI / 2, false);\n  s.lineTo(-c, r);\n  s.absarc(-c, 0, r, Math.PI / 2, 3 * Math.PI / 2, false);\n  const g = new THREE3.ExtrudeGeometry(s, {\n    depth: layers.depth,\n    bevelEnabled: true,\n    bevelSize: layers.bevel,\n    bevelThickness: layers.bevel,\n    bevelSegments: 6,\n    curveSegments: 48\n  });\n  g.translate(0, 0, layers.bevel);\n  return g;\n}\nfunction GlassControl({\n  control,\n  frame,\n  screen,\n  frostedScreen,\n  surface,\n  config\n}) {\n  const glass = config.glass, layers = glassLayers(glass);\n  const b = control.box, w = b.width, h = b.height;\n  const geometry = useMemo2(\n    () => glassGeometry(w, h, layers),\n    [w, h, glass.depth, glass.bevel]\n  );\n  const show = control.reveal, scale = control.scale;\n  useLayoutEffect2(() => () => geometry.dispose(), [geometry]);\n  return <group\n    name={\"glass:\" + control.id}\n    position={[b.x + w / 2, -b.y - h / 2, control.z]}\n  >\n      <group\n    rotation={control.rotation}\n    scale={[\n      scale * control.stretch[0],\n      scale * control.stretch[1],\n      Math.max(0.03, control.thickness)\n    ]}\n  >\n        <mesh\n    name={\"glass-volume:\" + control.id}\n    geometry={geometry}\n    renderOrder={8}\n  >\n          <meshBasicMaterial\n    attach=\"material-0\"\n    transparent\n    opacity={0}\n    depthWrite={false}\n  />\n          <meshPhysicalMaterial\n    attach=\"material-1\"\n    color={glass.color}\n    roughness={glass.roughness}\n    metalness={0}\n    transmission={glass.transmission}\n    thickness={glass.opticalThickness}\n    ior={glass.ior}\n    clearcoat={glass.clearcoat}\n    clearcoatRoughness={glass.clearcoatRoughness}\n    transparent\n    opacity={show * control.frost}\n    depthWrite={false}\n  />\n        </mesh>\n        <group position={[0, 0, layers.face]}>\n          <GlassSurface\n    glass={glass}\n    screen={screen}\n    frostedScreen={frostedScreen}\n    surface={surface}\n    control={control}\n    frame={frame}\n    lift={(surface.origin[2] - surface.glassZ) / surface.unit + control.z + layers.face * Math.max(0.03, control.thickness)}\n  />\n        </group>\n        {control.highlight && <SelectionHighlight\n    control={control}\n    layers={layers}\n    config={config}\n  />}\n        {control.icons.map((icon) => <Icon\n    layers={layers}\n    style={config.icons}\n    key={icon.type}\n    type={icon.type}\n    size={icon.size}\n    x={icon.x}\n    y={icon.y}\n    parent={b}\n    show={icon.reveal * show}\n    selected={icon.selected}\n  />)}\n      </group>\n    </group>;\n}\n\n// src/render/DeviceScene.jsx\nfunction CameraRig({ surface, state, config }) {\n  const { camera } = useThree();\n  const pos = cameraFit(surface, state, config);\n  useLayoutEffect3(() => {\n    camera.position.set(...pos);\n    camera.lookAt(pos[0], pos[1], pos[2] - 1);\n    camera.updateMatrixWorld();\n  }, [camera, ...pos]);\n  return null;\n}\nfunction DeviceScene({ assets, frame, config, sampleState: sampleState2, validateState, makeScreen, diagnostic = false }) {\n  const raw = useLoader(THREE4.FileLoader, assets.model.handle);\n  const model = useMemo3(\n    () => normalizeModel(parseModel(raw), config.device),\n    [\n      raw,\n      config.device.displayMesh,\n      ...config.device.right,\n      ...config.device.up,\n      ...config.device.normal,\n      config.device.flipWinding,\n      config.device.confirmBaked\n    ]\n  );\n  const surface = useMemo3(\n    () => displaySurface(\n      model,\n      config.device.displayMesh,\n      config.device.pixelWidth,\n      config.device.clearance\n    ),\n    [model, config.device.pixelWidth, config.device.clearance]\n  );\n  const state = sampleState2(surface, frame, config);\n  useMemo3(() => validateState(surface, config), [surface, config, validateState]);\n  if (diagnostic) {\n    state.rotation = frame % 2 === 0 ? [0, 0, 0] : [-0.45, -0.4, -0.12];\n    state.visible = state.controls.map((c) => ({\n      ...c,\n      scale: 1,\n      stretch: [1, 1],\n      thickness: 1,\n      frost: 1,\n      rotation: [0, 0, 0],\n      reveal: 1,\n      icons: c.icons.map((i) => ({ ...i, reveal: 1 }))\n    }));\n    state.diagnostic = true;\n  }\n  return config.screen.source === \"asset\" ? <AssetScreenScene\n    surface={surface}\n    model={model}\n    state={state}\n    config={config}\n    frame={frame}\n    diagnostic={diagnostic}\n    assets={assets}\n  /> : <SimulatedScreenScene\n    makeScreen={makeScreen}\n    surface={surface}\n    model={model}\n    state={state}\n    config={config}\n    frame={frame}\n    diagnostic={diagnostic}\n  />;\n}\nfunction SimulatedScreenScene(props) {\n  const screen = useMemo3(\n    () => props.makeScreen(props.surface, props.config.screen),\n    [props.surface, props.config.screen, props.makeScreen]\n  );\n  useLayoutEffect3(() => () => screen.dispose(), [screen]);\n  return <SceneContents {...props} screen={screen} />;\n}\nfunction AssetScreenScene(props) {\n  if (!props.assets.screen?.handle)\n    throw Error(\"screen.source=asset requires the screen asset binding\");\n  const loaded = useLoader(THREE4.TextureLoader, props.assets.screen.handle);\n  const screen = useMemo3(() => {\n    const t = loaded.clone();\n    t.colorSpace = THREE4.SRGBColorSpace;\n    t.anisotropy = 16;\n    t.needsUpdate = true;\n    return t;\n  }, [loaded]);\n  useLayoutEffect3(() => () => screen.dispose(), [screen]);\n  if (Math.abs(\n    screen.image.width / screen.image.height - props.surface.width / props.surface.height\n  ) > 0.01)\n    throw Error(\n      \"Screen asset aspect must match native display; provide a portrait screen capture without device hardware\"\n    );\n  return <SceneContents {...props} screen={screen} />;\n}\nfunction SceneContents({\n  surface,\n  model,\n  state,\n  config,\n  frame,\n  diagnostic,\n  screen\n}) {\n  const layers = glassLayers(config.glass);\n  const frostedScreen = useMemo3(() => {\n    const c = document.createElement(\"canvas\");\n    c.width = screen.image.width;\n    c.height = screen.image.height;\n    const ctx = c.getContext(\"2d\");\n    ctx.filter = \"blur(\" + config.glass.frostBlur + \"px)\";\n    ctx.drawImage(screen.image, 0, 0);\n    return texture(c);\n  }, [screen, config.glass.frostBlur]);\n  useLayoutEffect3(\n    () => () => {\n      frostedScreen.dispose();\n    },\n    [screen, frostedScreen]\n  );\n  const focusBox = state.focusBox ?? state.focus.box;\n  const cameraPosition = cameraFit(surface, state, config), target = controlWorld(\n    surface,\n    focusBox,\n    state.focus.z + layers.icon,\n    state.rotation\n  );\n  const distance = length(sub(cameraPosition, target));\n  const parts = useMemo3(\n    () => model.meshes.map((m) => {\n      const g = new THREE4.BufferGeometry();\n      g.setAttribute(\n        \"position\",\n        new THREE4.Float32BufferAttribute(m.positions, 3)\n      );\n      g.setIndex(m.indices);\n      if (m.name === config.device.displayMesh) {\n        const uv = [];\n        for (let i = 0; i < m.positions.length; i += 3)\n          uv.push(...screenUv(surface, m.positions[i], m.positions[i + 1]));\n        g.setAttribute(\"uv\", new THREE4.Float32BufferAttribute(uv, 2));\n      }\n      g.computeVertexNormals();\n      return { m, g };\n    }),\n    [model, surface]\n  );\n  useLayoutEffect3(() => () => parts.forEach(({ g }) => g.dispose()), [parts]);\n  return <>\n      <CameraRig surface={surface} state={state} config={config} />\n      {!diagnostic && config.focus.enabled && <FrameDepthOfField\n    focusDistance={distance}\n    focusRange={state.focusRange}\n    bokehScale={config.focus.bokeh}\n    resolutionScale={config.focus.resolutionScale}\n  />}\n      <ambientLight intensity={config.lighting.ambient} />\n      <directionalLight {...config.lighting.key} />\n      <directionalLight {...config.lighting.fill} />\n      <group name=\"native-device-root\" rotation={state.rotation}>\n        {parts.map(({ m, g }) => <mesh key={m.name} name={m.name} geometry={g}>\n            {m.name === config.device.displayMesh ? <meshBasicMaterial map={screen} toneMapped={false} /> : <meshPhysicalMaterial\n    color={m.material === \"screen\" ? config.hardware.screenColor : config.hardware.color}\n    metalness={m.material === \"frame\" ? config.hardware.frameMetalness : config.hardware.metalness}\n    roughness={config.hardware.roughness}\n    clearcoat={config.hardware.clearcoat}\n    side={THREE4.DoubleSide}\n  />}\n          </mesh>)}\n        <group\n    name=\"screen-coordinate-system\"\n    position={surface.origin}\n    scale={surface.unit}\n  >\n          <group position={[-surface.width / 2, surface.height / 2, 0]}>\n            {state.visible.map((control) => <GlassControl\n    config={config}\n    key={control.id}\n    control={control}\n    screen={screen}\n    frostedScreen={frostedScreen}\n    surface={surface}\n    frame={frame}\n  />)}\n          </group>\n        </group>\n      </group>\n    </>;\n}\n\n// src/showcase/schema.json\nvar schema_default = {\n  type: \"object\",\n  additionalProperties: false,\n  properties: {\n    schemaVersion: {\n      type: \"integer\",\n      enum: [\n        2\n      ]\n    },\n    shot: {\n      type: \"string\",\n      enum: [\n        \"film\",\n        \"compose\",\n        \"navbar\",\n        \"search\",\n        \"end\"\n      ]\n    },\n    startFrame: {\n      type: \"number\",\n      minimum: 0,\n      maximum: 1e5\n    },\n    diagnostic: {\n      type: \"boolean\"\n    },\n    timeline: {\n      type: \"object\",\n      additionalProperties: false,\n      properties: {\n        fps: {\n          type: \"number\",\n          minimum: 1,\n          maximum: 120\n        },\n        cuts: {\n          type: \"array\",\n          items: {\n            type: \"number\",\n            minimum: 1,\n            maximum: 1e5\n          },\n          minItems: 4,\n          maxItems: 4\n        },\n        fadeIn: {\n          type: \"array\",\n          items: {\n            type: \"number\",\n            minimum: 0,\n            maximum: 1e5\n          },\n          minItems: 2,\n          maxItems: 2\n        },\n        logoIn: {\n          type: \"array\",\n          items: {\n            type: \"number\",\n            minimum: 0,\n            maximum: 1e5\n          },\n          minItems: 2,\n          maxItems: 2\n        },\n        logoOut: {\n          type: \"array\",\n          items: {\n            type: \"number\",\n            minimum: 0,\n            maximum: 1e5\n          },\n          minItems: 2,\n          maxItems: 2\n        },\n        speed: {\n          type: \"number\",\n          minimum: 0.25,\n          maximum: 4\n        }\n      }\n    },\n    picture: {\n      type: \"object\",\n      additionalProperties: false,\n      properties: {\n        aspect: {\n          type: \"number\",\n          minimum: 0.5,\n          maximum: 4\n        },\n        background: {\n          type: \"string\",\n          minLength: 1,\n          pattern: \"^#[0-9a-fA-F]{6}$\"\n        }\n      }\n    },\n    device: {\n      type: \"object\",\n      additionalProperties: false,\n      properties: {\n        displayMesh: {\n          type: \"string\",\n          minLength: 1\n        },\n        right: {\n          type: \"array\",\n          items: {\n            type: \"number\",\n            minimum: -1,\n            maximum: 1\n          },\n          minItems: 3,\n          maxItems: 3\n        },\n        up: {\n          type: \"array\",\n          items: {\n            type: \"number\",\n            minimum: -1,\n            maximum: 1\n          },\n          minItems: 3,\n          maxItems: 3\n        },\n        normal: {\n          type: \"array\",\n          items: {\n            type: \"number\",\n            minimum: -1,\n            maximum: 1\n          },\n          minItems: 3,\n          maxItems: 3\n        },\n        confirmBaked: {\n          type: \"boolean\"\n        },\n        flipWinding: {\n          type: \"boolean\"\n        },\n        pixelWidth: {\n          type: \"number\",\n          minimum: 100,\n          maximum: 4096\n        },\n        clearance: {\n          type: \"number\",\n          minimum: 0.1,\n          maximum: 20\n        },\n        poseDegrees: {\n          type: \"array\",\n          items: {\n            type: \"number\",\n            minimum: -60,\n            maximum: 60\n          },\n          minItems: 3,\n          maxItems: 3\n        }\n      }\n    },\n    glass: {\n      type: \"object\",\n      additionalProperties: false,\n      properties: {\n        depth: {\n          type: \"number\",\n          minimum: 0.1,\n          maximum: 80\n        },\n        bevel: {\n          type: \"number\",\n          minimum: 0,\n          maximum: 20\n        },\n        faceGap: {\n          type: \"number\",\n          minimum: 0.01,\n          maximum: 10\n        },\n        selectionGap: {\n          type: \"number\",\n          minimum: 0.01,\n          maximum: 10\n        },\n        iconGap: {\n          type: \"number\",\n          minimum: 0.01,\n          maximum: 20\n        },\n        color: {\n          type: \"string\",\n          minLength: 1,\n          pattern: \"^#[0-9a-fA-F]{6}$\"\n        },\n        roughness: {\n          type: \"number\",\n          minimum: 0,\n          maximum: 1\n        },\n        transmission: {\n          type: \"number\",\n          minimum: 0,\n          maximum: 1\n        },\n        opticalThickness: {\n          type: \"number\",\n          minimum: 0,\n          maximum: 1\n        },\n        ior: {\n          type: \"number\",\n          minimum: 1,\n          maximum: 2.33\n        },\n        clearcoat: {\n          type: \"number\",\n          minimum: 0,\n          maximum: 1\n        },\n        clearcoatRoughness: {\n          type: \"number\",\n          minimum: 0,\n          maximum: 1\n        },\n        frostBlur: {\n          type: \"number\",\n          minimum: 0,\n          maximum: 64\n        },\n        frost: {\n          type: \"number\",\n          minimum: 0,\n          maximum: 1\n        },\n        rimStrength: {\n          type: \"number\",\n          minimum: 0,\n          maximum: 1\n        },\n        formedRimStrength: {\n          type: \"number\",\n          minimum: 0,\n          maximum: 1\n        },\n        bevelWidth: {\n          type: \"number\",\n          minimum: 0.1,\n          maximum: 40\n        },\n        backdropStrength: {\n          type: \"number\",\n          minimum: 0,\n          maximum: 1\n        },\n        selectionColor: {\n          type: \"string\",\n          minLength: 1,\n          pattern: \"^#[0-9a-fA-F]{6}$\"\n        },\n        selectionOpacity: {\n          type: \"number\",\n          minimum: 0,\n          maximum: 1\n        }\n      }\n    },\n    layout: {\n      type: \"object\",\n      additionalProperties: false,\n      properties: {\n        compose: {\n          type: \"object\",\n          additionalProperties: false,\n          properties: {\n            x: {\n              type: \"number\",\n              minimum: 0,\n              maximum: 4096\n            },\n            y: {\n              type: \"number\",\n              minimum: 0,\n              maximum: 8192\n            },\n            width: {\n              type: \"number\",\n              minimum: 1,\n              maximum: 4096\n            },\n            height: {\n              type: \"number\",\n              minimum: 1,\n              maximum: 4096\n            },\n            z: {\n              type: \"number\",\n              minimum: 0.1,\n              maximum: 40\n            },\n            icon: {\n              type: \"object\",\n              additionalProperties: false,\n              properties: {\n                type: {\n                  type: \"string\",\n                  enum: [\n                    \"compose\",\n                    \"home\",\n                    \"inbox\",\n                    \"focus\",\n                    \"layers\",\n                    \"search\"\n                  ]\n                },\n                size: {\n                  type: \"number\",\n                  minimum: 1,\n                  maximum: 180\n                }\n              }\n            }\n          }\n        },\n        navbar: {\n          type: \"object\",\n          additionalProperties: false,\n          properties: {\n            x: {\n              type: \"number\",\n              minimum: 0,\n              maximum: 4096\n            },\n            bottom: {\n              type: \"number\",\n              minimum: 1,\n              maximum: 8192\n            },\n            width: {\n              type: \"number\",\n              minimum: 1,\n              maximum: 4096\n            },\n            compactWidth: {\n              type: \"number\",\n              minimum: 1,\n              maximum: 4096\n            },\n            height: {\n              type: \"number\",\n              minimum: 1,\n              maximum: 4096\n            },\n            z: {\n              type: \"number\",\n              minimum: 0.1,\n              maximum: 40\n            },\n            icons: {\n              type: \"array\",\n              items: {\n                type: \"object\",\n                additionalProperties: false,\n                properties: {\n                  type: {\n                    type: \"string\",\n                    enum: [\n                      \"compose\",\n                      \"home\",\n                      \"inbox\",\n                      \"focus\",\n                      \"layers\",\n                      \"search\"\n                    ]\n                  },\n                  size: {\n                    type: \"number\",\n                    minimum: 1,\n                    maximum: 180\n                  }\n                }\n              },\n              minItems: 1\n            },\n            highlight: {\n              type: \"object\",\n              additionalProperties: false,\n              properties: {\n                shape: {\n                  type: \"string\",\n                  enum: [\n                    \"ellipse\",\n                    \"capsule\",\n                    \"roundedRect\"\n                  ]\n                },\n                index: {\n                  type: \"integer\",\n                  minimum: 0\n                },\n                insetX: {\n                  type: \"number\",\n                  minimum: 0,\n                  maximum: 100\n                },\n                insetY: {\n                  type: \"number\",\n                  minimum: 0,\n                  maximum: 100\n                },\n                cornerRadius: {\n                  type: \"number\",\n                  minimum: 0,\n                  maximum: 100\n                }\n              }\n            }\n          }\n        },\n        search: {\n          type: \"object\",\n          additionalProperties: false,\n          properties: {\n            x: {\n              type: \"number\",\n              minimum: 0,\n              maximum: 4096\n            },\n            bottom: {\n              type: \"number\",\n              minimum: 1,\n              maximum: 8192\n            },\n            width: {\n              type: \"number\",\n              minimum: 1,\n              maximum: 4096\n            },\n            height: {\n              type: \"number\",\n              minimum: 1,\n              maximum: 4096\n            },\n            z: {\n              type: \"number\",\n              minimum: 0.1,\n              maximum: 40\n            },\n            icon: {\n              type: \"object\",\n              additionalProperties: false,\n              properties: {\n                type: {\n                  type: \"string\",\n                  enum: [\n                    \"compose\",\n                    \"home\",\n                    \"inbox\",\n                    \"focus\",\n                    \"layers\",\n                    \"search\"\n                  ]\n                },\n                size: {\n                  type: \"number\",\n                  minimum: 1,\n                  maximum: 180\n                }\n              }\n            }\n          }\n        }\n      }\n    },\n    motion: {\n      type: \"object\",\n      additionalProperties: false,\n      properties: {\n        compose: {\n          type: \"object\",\n          additionalProperties: false,\n          properties: {\n            scale: {\n              type: \"array\",\n              items: {\n                type: \"array\",\n                items: {\n                  type: \"number\",\n                  minimum: -1e4,\n                  maximum: 1e4\n                },\n                minItems: 2,\n                maxItems: 2\n              },\n              minItems: 1\n            },\n            stretch: {\n              type: \"number\",\n              minimum: 0,\n              maximum: 0.2\n            },\n            settle: {\n              type: \"array\",\n              items: {\n                type: \"number\",\n                minimum: 0,\n                maximum: 1e5\n              },\n              minItems: 2,\n              maxItems: 2\n            },\n            formation: {\n              type: \"array\",\n              items: {\n                type: \"number\",\n                minimum: 0,\n                maximum: 1e5\n              },\n              minItems: 2,\n              maxItems: 2\n            },\n            frost: {\n              type: \"array\",\n              items: {\n                type: \"number\",\n                minimum: 0,\n                maximum: 1e5\n              },\n              minItems: 2,\n              maxItems: 2\n            },\n            reveal: {\n              type: \"array\",\n              items: {\n                type: \"number\",\n                minimum: 0,\n                maximum: 1e5\n              },\n              minItems: 2,\n              maxItems: 2\n            },\n            icon: {\n              type: \"array\",\n              items: {\n                type: \"number\",\n                minimum: 0,\n                maximum: 1e5\n              },\n              minItems: 2,\n              maxItems: 2\n            }\n          }\n        },\n        navbar: {\n          type: \"object\",\n          additionalProperties: false,\n          properties: {\n            formation: {\n              type: \"array\",\n              items: {\n                type: \"number\",\n                minimum: 0,\n                maximum: 1e5\n              },\n              minItems: 2,\n              maxItems: 2\n            },\n            frost: {\n              type: \"array\",\n              items: {\n                type: \"number\",\n                minimum: 0,\n                maximum: 1e5\n              },\n              minItems: 2,\n              maxItems: 2\n            },\n            initialFormation: {\n              type: \"number\",\n              minimum: 0,\n              maximum: 1\n            },\n            selection: {\n              type: \"array\",\n              items: { type: \"number\", minimum: 0, maximum: 1e5 },\n              minItems: 2,\n              maxItems: 2\n            },\n            initialFrost: {\n              type: \"number\",\n              minimum: 0,\n              maximum: 1\n            },\n            icons: {\n              type: \"array\",\n              items: {\n                type: \"array\",\n                items: {\n                  type: \"number\",\n                  minimum: 0,\n                  maximum: 1e5\n                },\n                minItems: 2,\n                maxItems: 2\n              },\n              minItems: 1\n            }\n          }\n        },\n        search: {\n          type: \"object\",\n          additionalProperties: false,\n          properties: {\n            formation: {\n              type: \"array\",\n              items: {\n                type: \"number\",\n                minimum: 0,\n                maximum: 1e5\n              },\n              minItems: 2,\n              maxItems: 2\n            },\n            frost: {\n              type: \"array\",\n              items: {\n                type: \"number\",\n                minimum: 0,\n                maximum: 1e5\n              },\n              minItems: 2,\n              maxItems: 2\n            },\n            initialFormation: {\n              type: \"number\",\n              minimum: 0,\n              maximum: 1\n            },\n            initialFrost: {\n              type: \"number\",\n              minimum: 0,\n              maximum: 1\n            },\n            icon: {\n              type: \"array\",\n              items: {\n                type: \"number\",\n                minimum: 0,\n                maximum: 1e5\n              },\n              minItems: 2,\n              maxItems: 2\n            }\n          }\n        }\n      }\n    },\n    camera: {\n      type: \"object\",\n      additionalProperties: false,\n      properties: {\n        fov: {\n          type: \"number\",\n          minimum: 1,\n          maximum: 90\n        },\n        anchorDepth: {\n          type: \"number\",\n          minimum: 0.1,\n          maximum: 120\n        },\n        compose: {\n          type: \"object\",\n          additionalProperties: false,\n          properties: {\n            rotation: {\n              type: \"array\",\n              items: {\n                type: \"array\",\n                items: {\n                  type: \"number\",\n                  minimum: -1e4,\n                  maximum: 1e4\n                },\n                minItems: 4,\n                maxItems: 4\n              },\n              minItems: 1\n            },\n            target: {\n              type: \"array\",\n              items: {\n                type: \"array\",\n                items: {\n                  type: \"number\",\n                  minimum: -1e4,\n                  maximum: 1e4\n                },\n                minItems: 4,\n                maxItems: 4\n              },\n              minItems: 1\n            }\n          }\n        },\n        navbar: {\n          type: \"object\",\n          additionalProperties: false,\n          properties: {\n            rotation: {\n              type: \"array\",\n              items: {\n                type: \"array\",\n                items: {\n                  type: \"number\",\n                  minimum: -1e4,\n                  maximum: 1e4\n                },\n                minItems: 4,\n                maxItems: 4\n              },\n              minItems: 1\n            },\n            target: {\n              type: \"array\",\n              items: {\n                type: \"array\",\n                items: {\n                  type: \"number\",\n                  minimum: -1e4,\n                  maximum: 1e4\n                },\n                minItems: 4,\n                maxItems: 4\n              },\n              minItems: 1\n            }\n          }\n        },\n        search: {\n          type: \"object\",\n          additionalProperties: false,\n          properties: {\n            rotation: {\n              type: \"array\",\n              items: {\n                type: \"array\",\n                items: {\n                  type: \"number\",\n                  minimum: -1e4,\n                  maximum: 1e4\n                },\n                minItems: 4,\n                maxItems: 4\n              },\n              minItems: 1\n            },\n            target: {\n              type: \"array\",\n              items: {\n                type: \"array\",\n                items: {\n                  type: \"number\",\n                  minimum: -1e4,\n                  maximum: 1e4\n                },\n                minItems: 4,\n                maxItems: 4\n              },\n              minItems: 1\n            }\n          }\n        },\n        framing: {\n          type: \"object\",\n          additionalProperties: false,\n          properties: {\n            offset: {\n              type: \"array\",\n              items: {\n                type: \"number\",\n                minimum: -0.4,\n                maximum: 0.4\n              },\n              minItems: 2,\n              maxItems: 2\n            },\n            zoom: {\n              type: \"number\",\n              minimum: 0.25,\n              maximum: 2\n            }\n          }\n        }\n      }\n    },\n    screen: {\n      type: \"object\",\n      additionalProperties: false,\n      properties: {\n        source: {\n          type: \"string\",\n          enum: [\n            \"simulated\",\n            \"asset\"\n          ]\n        },\n        background: {\n          type: \"string\",\n          minLength: 1,\n          pattern: \"^#[0-9a-fA-F]{6}$\"\n        },\n        fontFamily: {\n          type: \"string\",\n          minLength: 1\n        },\n        fontSize: {\n          type: \"number\",\n          minimum: 8,\n          maximum: 160\n        },\n        textColor: {\n          type: \"string\",\n          minLength: 1,\n          pattern: \"^#[0-9a-fA-F]{6}$\"\n        },\n        selectedTextColor: {\n          type: \"string\",\n          minLength: 1,\n          pattern: \"^#[0-9a-fA-F]{6}$\"\n        },\n        selectedRow: {\n          type: \"number\",\n          minimum: -1,\n          maximum: 100\n        },\n        rows: {\n          type: \"array\",\n          items: {\n            type: \"object\",\n            additionalProperties: false,\n            properties: {\n              label: {\n                type: \"string\",\n                minLength: 1\n              },\n              color: {\n                type: \"string\",\n                minLength: 1,\n                pattern: \"^#[0-9a-fA-F]{6}$\"\n              }\n            }\n          },\n          minItems: 1\n        },\n        rowsBottom: {\n          type: \"number\",\n          minimum: 1,\n          maximum: 8192\n        },\n        rowGap: {\n          type: \"number\",\n          minimum: 1,\n          maximum: 1e3\n        },\n        iconX: {\n          type: \"number\",\n          minimum: 0,\n          maximum: 4096\n        },\n        textX: {\n          type: \"number\",\n          minimum: 0,\n          maximum: 4096\n        },\n        iconRadius: {\n          type: \"number\",\n          minimum: 1,\n          maximum: 100\n        },\n        statusBar: {\n          type: \"boolean\"\n        }\n      }\n    },\n    icons: {\n      type: \"object\",\n      additionalProperties: false,\n      properties: {\n        inactiveOpacity: { type: \"number\", minimum: 0, maximum: 1 },\n        color: {\n          type: \"string\",\n          minLength: 1,\n          pattern: \"^#[0-9a-fA-F]{6}$\"\n        },\n        strokeWidth: {\n          type: \"number\",\n          minimum: 1,\n          maximum: 20\n        }\n      }\n    },\n    focus: {\n      type: \"object\",\n      additionalProperties: false,\n      properties: {\n        enabled: {\n          type: \"boolean\"\n        },\n        ranges: {\n          type: \"array\",\n          items: {\n            type: \"number\",\n            minimum: 0.01,\n            maximum: 100\n          },\n          minItems: 3,\n          maxItems: 3\n        },\n        bokeh: {\n          type: \"number\",\n          minimum: 0,\n          maximum: 5\n        },\n        resolutionScale: {\n          type: \"number\",\n          minimum: 0.1,\n          maximum: 1\n        }\n      }\n    },\n    lighting: {\n      type: \"object\",\n      additionalProperties: false,\n      properties: {\n        ambient: {\n          type: \"number\",\n          minimum: 0,\n          maximum: 5\n        },\n        key: {\n          type: \"object\",\n          additionalProperties: false,\n          properties: {\n            position: {\n              type: \"array\",\n              items: {\n                type: \"number\",\n                minimum: -1e4,\n                maximum: 1e4\n              },\n              minItems: 3,\n              maxItems: 3\n            },\n            intensity: {\n              type: \"number\",\n              minimum: 0,\n              maximum: 10\n            },\n            color: {\n              type: \"string\",\n              minLength: 1,\n              pattern: \"^#[0-9a-fA-F]{6}$\"\n            }\n          }\n        },\n        fill: {\n          type: \"object\",\n          additionalProperties: false,\n          properties: {\n            position: {\n              type: \"array\",\n              items: {\n                type: \"number\",\n                minimum: -1e4,\n                maximum: 1e4\n              },\n              minItems: 3,\n              maxItems: 3\n            },\n            intensity: {\n              type: \"number\",\n              minimum: 0,\n              maximum: 10\n            },\n            color: {\n              type: \"string\",\n              minLength: 1,\n              pattern: \"^#[0-9a-fA-F]{6}$\"\n            }\n          }\n        }\n      }\n    },\n    hardware: {\n      type: \"object\",\n      additionalProperties: false,\n      properties: {\n        color: {\n          type: \"string\",\n          minLength: 1,\n          pattern: \"^#[0-9a-fA-F]{6}$\"\n        },\n        screenColor: {\n          type: \"string\",\n          minLength: 1,\n          pattern: \"^#[0-9a-fA-F]{6}$\"\n        },\n        frameMetalness: {\n          type: \"number\",\n          minimum: 0,\n          maximum: 1\n        },\n        metalness: {\n          type: \"number\",\n          minimum: 0,\n          maximum: 1\n        },\n        roughness: {\n          type: \"number\",\n          minimum: 0,\n          maximum: 1\n        },\n        clearcoat: {\n          type: \"number\",\n          minimum: 0,\n          maximum: 1\n        }\n      }\n    },\n    endCard: {\n      type: \"object\",\n      additionalProperties: false,\n      properties: {\n        text: {\n          type: \"string\",\n          minLength: 1\n        },\n        color: {\n          type: \"string\",\n          minLength: 1,\n          pattern: \"^#[0-9a-fA-F]{6}$\"\n        },\n        fontFamily: {\n          type: \"string\",\n          minLength: 1\n        },\n        showMark: {\n          type: \"boolean\"\n        }\n      }\n    }\n  }\n};\n\n// src/showcase/profile.json\nvar profile_default = {\n  schemaVersion: 2,\n  shot: \"film\",\n  startFrame: 0,\n  diagnostic: false,\n  timeline: {\n    fps: 60,\n    cuts: [\n      220,\n      536,\n      698,\n      910\n    ],\n    fadeIn: [\n      0,\n      30\n    ],\n    logoIn: [\n      699,\n      720\n    ],\n    logoOut: [\n      865,\n      909\n    ],\n    speed: 1\n  },\n  picture: {\n    aspect: 2,\n    background: \"#000000\"\n  },\n  device: {\n    displayMesh: \"display\",\n    right: [\n      1,\n      0,\n      0\n    ],\n    up: [\n      0,\n      1,\n      0\n    ],\n    normal: [\n      0,\n      0,\n      1\n    ],\n    confirmBaked: true,\n    flipWinding: false,\n    pixelWidth: 1200,\n    clearance: 2,\n    poseDegrees: [\n      0,\n      0,\n      0\n    ]\n  },\n  glass: {\n    depth: 8,\n    bevel: 2,\n    faceGap: 0.3,\n    selectionGap: 0.7,\n    iconGap: 2,\n    color: \"#aeb2ba\",\n    roughness: 0.34,\n    transmission: 0.96,\n    opticalThickness: 0.07,\n    ior: 1.35,\n    clearcoat: 0.3,\n    clearcoatRoughness: 0.3,\n    frostBlur: 16,\n    frost: 1,\n    rimStrength: 0.28,\n    formedRimStrength: 0.04,\n    bevelWidth: 11,\n    backdropStrength: 0.52,\n    selectionColor: \"#444448\",\n    selectionOpacity: 0.32\n  },\n  layout: {\n    compose: {\n      x: 930,\n      y: 210,\n      width: 180,\n      height: 180,\n      z: 6,\n      icon: {\n        type: \"compose\",\n        size: 80\n      }\n    },\n    navbar: {\n      x: 80,\n      bottom: 330,\n      width: 1040,\n      compactWidth: 770,\n      height: 180,\n      z: 6,\n      icons: [\n        {\n          type: \"home\",\n          size: 90\n        },\n        {\n          type: \"inbox\",\n          size: 90\n        },\n        {\n          type: \"focus\",\n          size: 90\n        },\n        {\n          type: \"layers\",\n          size: 90\n        }\n      ],\n      highlight: {\n        shape: \"capsule\",\n        index: 0,\n        insetX: 6,\n        insetY: 11,\n        cornerRadius: 32\n      }\n    },\n    search: {\n      x: 930,\n      bottom: 330,\n      width: 180,\n      height: 180,\n      z: 6,\n      icon: {\n        type: \"search\",\n        size: 78\n      }\n    }\n  },\n  motion: {\n    compose: {\n      scale: [\n        [\n          50,\n          0\n        ],\n        [\n          54,\n          0.18\n        ],\n        [\n          58,\n          0.42\n        ],\n        [\n          62,\n          0.61\n        ],\n        [\n          66,\n          0.77\n        ],\n        [\n          70,\n          0.92\n        ],\n        [\n          75,\n          1.07\n        ],\n        [\n          85,\n          1.02\n        ],\n        [\n          110,\n          1\n        ]\n      ],\n      stretch: 0.07,\n      settle: [\n        63,\n        95\n      ],\n      formation: [\n        54,\n        86\n      ],\n      frost: [\n        64,\n        92\n      ],\n      reveal: [\n        50,\n        58\n      ],\n      icon: [\n        96,\n        132\n      ]\n    },\n    navbar: {\n      formation: [\n        220,\n        274\n      ],\n      frost: [\n        220,\n        275\n      ],\n      initialFormation: 0.7,\n      initialFrost: 0.45,\n      selection: [274, 310],\n      icons: [\n        [\n          274,\n          310\n        ],\n        [\n          355,\n          399\n        ],\n        [\n          411,\n          450\n        ],\n        [\n          463,\n          500\n        ]\n      ]\n    },\n    search: {\n      formation: [\n        536,\n        580\n      ],\n      frost: [\n        536,\n        587\n      ],\n      initialFormation: 0.55,\n      initialFrost: 0.3,\n      icon: [\n        580,\n        620\n      ]\n    }\n  },\n  camera: {\n    fov: 12,\n    anchorDepth: 11,\n    compose: {\n      rotation: [\n        [\n          0,\n          -0.928,\n          -0.312,\n          0.152\n        ],\n        [\n          60,\n          -0.932302,\n          -0.268773,\n          0.157455\n        ],\n        [\n          90,\n          -0.934702,\n          -0.247036,\n          0.160414\n        ],\n        [\n          120,\n          -0.936682,\n          -0.22455,\n          0.161737\n        ],\n        [\n          150,\n          -0.939321,\n          -0.201198,\n          0.163632\n        ],\n        [\n          219,\n          -0.943623,\n          -0.1445,\n          0.167182\n        ]\n      ],\n      target: [\n        [\n          0,\n          0.495,\n          0.515,\n          0.195\n        ],\n        [\n          220,\n          0.495,\n          0.515,\n          0.225\n        ]\n      ]\n    },\n    navbar: {\n      rotation: [\n        [\n          220,\n          -0.93,\n          -0.45,\n          -0.22\n        ],\n        [\n          536,\n          -0.93,\n          -0.45,\n          -0.29\n        ]\n      ],\n      target: [\n        [\n          220,\n          0.52,\n          0.407,\n          0.734\n        ],\n        [\n          300,\n          0.523,\n          0.46,\n          0.756\n        ],\n        [\n          390,\n          0.534,\n          0.453,\n          0.761\n        ],\n        [\n          535,\n          0.532,\n          0.432,\n          0.781\n        ]\n      ]\n    },\n    search: {\n      rotation: [\n        [\n          536,\n          -0.25,\n          -0.88,\n          -0.33\n        ],\n        [\n          698,\n          -0.25,\n          -0.88,\n          -0.315\n        ]\n      ],\n      target: [\n        [\n          536,\n          0.62,\n          0.415,\n          0.156\n        ]\n      ]\n    },\n    framing: {\n      offset: [\n        0,\n        0\n      ],\n      zoom: 1\n    }\n  },\n  screen: {\n    source: \"simulated\",\n    background: \"#09090b\",\n    fontFamily: \"Inter, Arial, sans-serif\",\n    fontSize: 49,\n    textColor: \"#8d8d92\",\n    selectedTextColor: \"#b6b6b8\",\n    selectedRow: 5,\n    rows: [\n      {\n        label: \"Projects\",\n        color: \"#575365\"\n      },\n      {\n        label: \"Teams\",\n        color: \"#45454c\"\n      },\n      {\n        label: \"Website\",\n        color: \"#468756\"\n      },\n      {\n        label: \"iOS\",\n        color: \"#5268c8\"\n      },\n      {\n        label: \"Android\",\n        color: \"#a14355\"\n      },\n      {\n        label: \"Product\",\n        color: \"#6d58bd\"\n      },\n      {\n        label: \"Design\",\n        color: \"#7661ba\"\n      }\n    ],\n    rowsBottom: 1080,\n    rowGap: 142,\n    iconX: 145,\n    textX: 215,\n    iconRadius: 28,\n    statusBar: true\n  },\n  icons: {\n    color: \"#f5f5f5\",\n    inactiveOpacity: 0.58,\n    strokeWidth: 8\n  },\n  focus: {\n    enabled: true,\n    ranges: [\n      2,\n      3,\n      1.8\n    ],\n    bokeh: 0.8,\n    resolutionScale: 1\n  },\n  lighting: {\n    ambient: 0.13,\n    key: {\n      position: [\n        -8,\n        12,\n        12\n      ],\n      intensity: 0.9,\n      color: \"#d8d9e3\"\n    },\n    fill: {\n      position: [\n        8,\n        -8,\n        5\n      ],\n      intensity: 0.5,\n      color: \"#bcc2cf\"\n    }\n  },\n  hardware: {\n    color: \"#19191b\",\n    screenColor: \"#09090b\",\n    frameMetalness: 0.3,\n    metalness: 0.06,\n    roughness: 0.68,\n    clearcoat: 0.06\n  },\n  endCard: {\n    text: \"Your product\",\n    color: \"#f5f5f5\",\n    fontFamily: \"Inter\",\n    showMark: false\n  }\n};\n\n// src/showcase/params.mjs\nfunction withDefaults(schema, value) {\n  const out = { ...schema };\n  if (schema.type === \"object\") out.properties = Object.fromEntries(Object.entries(schema.properties).map(([key, child]) => [key, withDefaults(child, value?.[key])]));\n  else if (value !== void 0) out.default = value;\n  return out;\n}\nvar propSchema = withDefaults(schema_default, profile_default);\nfunction decode(schema, input, path = \"params\") {\n  const value = input === void 0 ? schema.default : input;\n  const fail = (message) => {\n    throw new Error(path + \": \" + message);\n  };\n  if (schema.type === \"object\") {\n    if (value !== void 0 && (!value || typeof value !== \"object\" || Array.isArray(value)))\n      fail(\"expected an object\");\n    for (const key of Object.keys(value || {}))\n      if (!Object.hasOwn(schema.properties, key))\n        fail(\"unknown property \" + key);\n    return Object.fromEntries(\n      Object.entries(schema.properties).map(([key, def]) => [\n        key,\n        decode(def, value?.[key], path + \".\" + key)\n      ])\n    );\n  }\n  if (schema.type === \"array\") {\n    if (!Array.isArray(value) || value.length < (schema.minItems || 0) || value.length > (schema.maxItems ?? Infinity))\n      fail(\"invalid array length\");\n    return value.map(\n      (item, i) => decode(schema.items, item, path + \"[\" + i + \"]\")\n    );\n  }\n  if (typeof value !== (schema.type === \"integer\" ? \"number\" : schema.type))\n    fail(\"expected \" + schema.type);\n  if (typeof value === \"number\" && (!Number.isFinite(value) || value < (schema.minimum ?? -Infinity) || value > (schema.maximum ?? Infinity) || schema.type === \"integer\" && !Number.isInteger(value)))\n    fail(\"number outside allowed range\");\n  if (typeof value === \"string\" && (value.length < (schema.minLength || 0) || schema.pattern && !new RegExp(schema.pattern).test(value)))\n    fail(\"invalid string\");\n  if (schema.enum && !schema.enum.includes(value)) fail(\"unsupported value\");\n  return value;\n}\nvar increasing = (values, label) => {\n  if (values.some((v, i) => i > 0 && v <= values[i - 1]))\n    throw Error(label + \": frames must strictly increase\");\n};\nfunction resolveParams(params = {}) {\n  const p = decode(propSchema, params);\n  increasing([0, ...p.timeline.cuts], \"timeline.cuts\");\n  for (const k of [\"fadeIn\", \"logoIn\", \"logoOut\"])\n    increasing(p.timeline[k], \"timeline.\" + k);\n  for (const k of [\"compose\", \"navbar\", \"search\"]) {\n    for (const [name, value] of Object.entries(p.motion[k]))\n      if (Array.isArray(value)) {\n        if (name === \"scale\")\n          increasing(\n            value.map((row) => row[0]),\n            \"motion.\" + k + \".scale\"\n          );\n        else if (name === \"icons\")\n          value.forEach((row) => increasing(row, \"motion.navbar.icons\"));\n        else increasing(value, \"motion.\" + k + \".\" + name);\n      }\n    for (const name of [\"rotation\", \"target\"])\n      increasing(\n        p.camera[k][name].map((row) => row[0]),\n        \"camera.\" + k + \".\" + name\n      );\n    if (p.camera[k].target.some((row) => row[3] <= 0))\n      throw Error(\"camera target projected width must be positive\");\n    const box = p.layout[k];\n    if (box.width < box.height || p.glass.bevel >= box.height / 2)\n      throw Error(\n        \"Glass controls require width >= height and bevel < height/2\"\n      );\n  }\n  if (p.layout.navbar.compactWidth < p.layout.navbar.height)\n    throw Error(\"compact navbar width must be >= height\");\n  if (p.layout.navbar.icons.length !== p.motion.navbar.icons.length)\n    throw Error(\"Every navbar icon needs a reveal window\");\n  if (p.motion.compose.scale.some((row) => row[1] < 0))\n    throw Error(\"Scale must be nonnegative\");\n  const nav = p.layout.navbar;\n  for (const width of [nav.width, nav.compactWidth])\n    validateHighlight(width, nav.height, nav.icons.length, nav.highlight);\n  return p;\n}\nfunction sourceFrame(p, render) {\n  const offset = {\n    film: 0,\n    compose: 0,\n    navbar: p.timeline.cuts[0],\n    search: p.timeline.cuts[1],\n    end: p.timeline.cuts[2]\n  }[p.shot];\n  return offset + p.startFrame + render.frame * p.timeline.fps * p.timeline.speed / render.fps;\n}\n\n// src/showcase/choreography.mjs\nfunction controlState(surface, frame, p) {\n  const shot = frame < p.timeline.cuts[0] ? 0 : frame < p.timeline.cuts[1] ? 1 : frame < p.timeline.cuts[2] ? 2 : 3;\n  const h = surface.height, { compose: a, navbar: b, search: c } = p.layout;\n  const { compose: ma, navbar: mb, search: mc } = p.motion;\n  const sample = (window) => enter(frame, ...window), form = (initial, window) => initial + (1 - initial) * sample(window);\n  const barWidth = shot === 2 ? b.compactWidth : b.width;\n  const controls = [\n    {\n      id: \"compose\",\n      box: { x: a.x, y: a.y, width: a.width, height: a.height },\n      z: a.z,\n      scale: measuredTrack(ma.scale, frame)[0],\n      stretch: [\n        1 + ma.stretch * (1 - sample(ma.settle)),\n        1 - ma.stretch * (1 - sample(ma.settle))\n      ],\n      thickness: sample(ma.formation),\n      frost: sample(ma.frost),\n      rotation: [0, 0, 0],\n      reveal: sample(ma.reveal),\n      icons: [\n        { ...a.icon, x: a.width / 2, y: a.height / 2, reveal: revealIcon(frame, ...ma.icon) }\n      ]\n    },\n    {\n      id: \"toolbar\",\n      highlight: b.highlight,\n      box: { x: b.x, y: h - b.bottom, width: barWidth, height: b.height },\n      z: b.z,\n      scale: 1,\n      stretch: [1, 1],\n      thickness: shot === 1 ? form(mb.initialFormation, mb.formation) : 1,\n      frost: shot === 1 ? form(mb.initialFrost, mb.frost) : 1,\n      rotation: [0, 0, 0],\n      reveal: 1,\n      selectionReveal: shot === 2 ? 1 : revealIcon(frame, ...mb.selection),\n      icons: b.icons.map((icon, i) => ({\n        ...icon,\n        x: barWidth * (i + 0.5) / b.icons.length,\n        y: b.height / 2,\n        selected: i === b.highlight.index,\n        // The selected tab is legible on the selection beat, irrespective of slot.\n        reveal: shot === 2 ? 1 : revealIcon(frame, ...i === b.highlight.index ? mb.selection : mb.icons[i])\n      }))\n    },\n    {\n      id: \"search\",\n      box: { x: c.x, y: h - c.bottom, width: c.width, height: c.height },\n      z: c.z,\n      scale: 1,\n      stretch: [1, 1],\n      thickness: form(mc.initialFormation, mc.formation),\n      frost: form(mc.initialFrost, mc.frost),\n      rotation: [0, 0, 0],\n      reveal: 1,\n      icons: [\n        { ...c.icon, x: c.width / 2, y: c.height / 2, reveal: revealIcon(frame, ...mc.icon) }\n      ]\n    }\n  ];\n  const rig = p.camera[[\"compose\", \"navbar\", \"search\"][Math.min(shot, 2)]];\n  return {\n    shot,\n    controls,\n    visible: shot === 0 ? [controls[0]] : shot === 1 ? [controls[1]] : shot === 2 ? [controls[1], controls[2]] : [],\n    // Hardware, screen, controls, and their analytic checks all consume this ONE pose.\n    rotation: cameraTrack(rig.rotation, frame).map((r, i) => r + p.device.poseDegrees[i] * Math.PI / 180),\n    target: cameraTrack(rig.target, frame).map((v, i) => i < 2 ? v + p.camera.framing.offset[i] : v * p.camera.framing.zoom),\n    focus: controls[Math.min(shot, 2)],\n    logo: sample(p.timeline.logoIn) * (1 - sample(p.timeline.logoOut))\n  };\n}\nfunction validateMountedControls(surface, p) {\n  const frames = /* @__PURE__ */ new Set([\n    0,\n    p.timeline.cuts[0],\n    p.timeline.cuts[1],\n    ...p.motion.compose.scale.map((k) => k[0]),\n    ...p.motion.compose.settle\n  ]);\n  for (const frame of frames) {\n    const state = controlState(surface, frame, p);\n    for (const c of state.visible) {\n      const b = c.box, r = b.height / 2;\n      for (let i = 0; i < 64; i++) {\n        const a = i / 64 * Math.PI * 2;\n        const x = (Math.cos(a) < 0 ? r : b.width - r) + Math.cos(a) * r - b.width / 2;\n        const y = r + Math.sin(a) * r - b.height / 2;\n        if (!onDisplay(\n          surface,\n          b.x + b.width / 2 + x * c.scale * c.stretch[0],\n          b.y + b.height / 2 + y * c.scale * c.stretch[1]\n        ))\n          throw Error(c.id + \": control exceeds native display\");\n      }\n      for (const icon of c.icons)\n        if (icon.x - icon.size / 2 < 0 || icon.x + icon.size / 2 > b.width || icon.y - icon.size / 2 < 0 || icon.y + icon.size / 2 > b.height)\n          throw Error(c.id + \": icon exceeds control bounds\");\n    }\n    if (state.shot === 2) {\n      const [a, b] = state.visible;\n      if (a.box.x + a.box.width >= b.box.x)\n        throw Error(\"Navbar overlaps search control\");\n    }\n  }\n}\nfunction sampleState(surface, frame, config) {\n  const state = controlState(surface, frame, config);\n  state.focusBox = state.shot === 1 ? {\n    ...state.focus.box,\n    x: state.focus.box.x + config.layout.navbar.highlight.index * state.focus.box.width / config.layout.navbar.icons.length,\n    width: state.focus.box.width / config.layout.navbar.icons.length\n  } : state.focus.box;\n  state.focusRange = config.focus.ranges[Math.min(state.shot, 2)];\n  return state;\n}\n\n// src/showcase/product-screen.mjs\nfunction screenMap(surface, ui) {\n  const c = document.createElement(\"canvas\");\n  c.width = surface.width;\n  c.height = Math.ceil(surface.height);\n  const ctx = c.getContext(\"2d\");\n  ctx.fillStyle = ui.background;\n  ctx.fillRect(0, 0, c.width, c.height);\n  ctx.save();\n  ctx.textBaseline = \"middle\";\n  ui.rows.forEach(({ label, color }, i) => {\n    const y = surface.height - ui.rowsBottom + i * ui.rowGap;\n    ctx.fillStyle = color;\n    ctx.beginPath();\n    ctx.arc(ui.iconX, y, ui.iconRadius, 0, Math.PI * 2);\n    ctx.fill();\n    ctx.fillStyle = i === ui.selectedRow ? ui.selectedTextColor : ui.textColor;\n    ctx.font = (i === ui.selectedRow ? \"600\" : \"500\") + \" \" + ui.fontSize + \"px \" + ui.fontFamily;\n    ctx.fillText(label, ui.textX, y);\n  });\n  ctx.restore();\n  if (!ui.statusBar) return texture(c);\n  ctx.save();\n  ctx.fillStyle = \"#c8c8ca\";\n  for (let i = 0; i < 4; i++) {\n    round(ctx, 827 + i * 18, 114 - i * 8, 13, 14 + i * 8, 4);\n    ctx.fill();\n  }\n  ctx.strokeStyle = \"#c8c8ca\";\n  ctx.lineWidth = 7;\n  for (const r of [10, 20, 30]) {\n    ctx.beginPath();\n    ctx.arc(940, 125, r, Math.PI * 1.2, Math.PI * 1.8);\n    ctx.stroke();\n  }\n  round(ctx, 1e3, 84, 81, 36, 9);\n  ctx.fill();\n  round(ctx, 1085, 94, 5, 15, 2);\n  ctx.fill();\n  ctx.restore();\n  return texture(c);\n}\n\n// src/Showcase.jsx\nfunction Logo({ opacity, config }) {\n  const { width } = useVideoConfig();\n  return <div\n    style={{\n      position: \"absolute\",\n      inset: 0,\n      display: \"flex\",\n      alignItems: \"center\",\n      justifyContent: \"center\",\n      gap: width * 0.019,\n      color: config.color,\n      opacity,\n      fontFamily: config.fontFamily,\n      fontSize: width * 0.054,\n      fontWeight: 500,\n      letterSpacing: -width * 25e-4\n    }}\n  >\n      {config.showMark && <svg width={width * 0.059} height={width * 0.059} viewBox=\"0 0 40 40\">\n          <rect x=\"5\" y=\"5\" width=\"30\" height=\"30\" rx=\"8\" fill=\"none\" stroke={config.color} strokeWidth=\"3\" />\n        </svg>}\n      <span>{config.text}</span>\n    </div>;\n}\nfunction DeviceUIMotion({ params, assets, render }) {\n  const config = useMemo4(() => resolveParams(params), [params]);\n  const { width, height } = useVideoConfig(), frame = sourceFrame(config, render);\n  const pictureHeight = width / config.picture.aspect, top = (height - pictureHeight) / 2;\n  const end = frame >= config.timeline.cuts[2];\n  return <AbsoluteFill style={{ background: config.picture.background }}>\n      <div\n    style={{\n      position: \"absolute\",\n      left: 0,\n      top,\n      width,\n      height: pictureHeight,\n      overflow: \"hidden\",\n      opacity: enter(frame, ...config.timeline.fadeIn)\n    }}\n  >\n        <ThreeCanvas\n    width={width}\n    height={pictureHeight}\n    flat\n    shadows\n    camera={{ fov: config.camera.fov, near: 0.01, far: 200 }}\n    gl={{ antialias: true, alpha: false }}\n  >\n          {end ? <color attach=\"background\" args={[config.picture.background]} /> : <DeviceScene\n    sampleState={sampleState}\n    validateState={validateMountedControls}\n    makeScreen={screenMap}\n    assets={assets}\n    frame={frame}\n    config={config}\n    diagnostic={config.diagnostic}\n  />}\n        </ThreeCanvas>\n        {end && <Logo\n    config={config.endCard}\n    opacity={enter(frame, ...config.timeline.logoIn) * (1 - enter(frame, ...config.timeline.logoOut))}\n  />}\n      </div>\n    </AbsoluteFill>;\n}\nexport {\n  DeviceUIMotion as default\n};\n",
+          "manifest": {
+            "version": 2,
+            "assets": {
+              "model": {
+                "kind": "image",
+                "required": true,
+                "mimeTypes": [
+                  "image/svg+xml"
+                ]
+              },
+              "screen": {
+                "kind": "image",
+                "required": false
+              }
+            },
+            "graphics": {
+              "api": "webgl",
+              "required": true,
+              "accelerationPreference": "hardware-preferred"
+            },
+            "alphaPolicy": "allows-opaque"
+          }
+        }
+      }
+    }
+  },
+  "recipe": {
+    "schemaVersion": 1,
+    "slug": "device-ui-motion",
+    "mediaSlots": [
+      {
+        "id": "model",
+        "projectMediaId": "recipe-media-device-ui-model",
+        "label": "Baked device mesh SVG",
+        "kind": "image"
+      }
+    ],
+    "components": [
+      {
+        "componentId": "device-ui-motion",
+        "name": "Device UI Motion",
+        "category": "layouts",
+        "sourceVersionId": "9e0690acfc521e4f91bb86cc7e0430e05db4d4541b649fe527f3e8be8d0055f2",
+        "propSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "schemaVersion": {
+              "type": "integer",
+              "enum": [
+                2
+              ],
+              "default": 2
+            },
+            "shot": {
+              "type": "string",
+              "enum": [
+                "film",
+                "compose",
+                "navbar",
+                "search",
+                "end"
+              ],
+              "default": "film"
+            },
+            "startFrame": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 100000,
+              "default": 0
+            },
+            "diagnostic": {
+              "type": "boolean",
+              "default": false
+            },
+            "timeline": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "fps": {
+                  "type": "number",
+                  "minimum": 1,
+                  "maximum": 120,
+                  "default": 60
+                },
+                "cuts": {
+                  "type": "array",
+                  "items": {
+                    "type": "number",
+                    "minimum": 1,
+                    "maximum": 100000
+                  },
+                  "minItems": 4,
+                  "maxItems": 4,
+                  "default": [
+                    220,
+                    536,
+                    698,
+                    910
+                  ]
+                },
+                "fadeIn": {
+                  "type": "array",
+                  "items": {
+                    "type": "number",
+                    "minimum": 0,
+                    "maximum": 100000
+                  },
+                  "minItems": 2,
+                  "maxItems": 2,
+                  "default": [
+                    0,
+                    30
+                  ]
+                },
+                "logoIn": {
+                  "type": "array",
+                  "items": {
+                    "type": "number",
+                    "minimum": 0,
+                    "maximum": 100000
+                  },
+                  "minItems": 2,
+                  "maxItems": 2,
+                  "default": [
+                    699,
+                    720
+                  ]
+                },
+                "logoOut": {
+                  "type": "array",
+                  "items": {
+                    "type": "number",
+                    "minimum": 0,
+                    "maximum": 100000
+                  },
+                  "minItems": 2,
+                  "maxItems": 2,
+                  "default": [
+                    865,
+                    909
+                  ]
+                },
+                "speed": {
+                  "type": "number",
+                  "minimum": 0.25,
+                  "maximum": 4,
+                  "default": 1
+                }
+              }
+            },
+            "picture": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "aspect": {
+                  "type": "number",
+                  "minimum": 0.5,
+                  "maximum": 4,
+                  "default": 2
+                },
+                "background": {
+                  "type": "string",
+                  "minLength": 1,
+                  "pattern": "^#[0-9a-fA-F]{6}$",
+                  "default": "#000000"
+                }
+              }
+            },
+            "device": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "displayMesh": {
+                  "type": "string",
+                  "minLength": 1,
+                  "default": "display"
+                },
+                "right": {
+                  "type": "array",
+                  "items": {
+                    "type": "number",
+                    "minimum": -1,
+                    "maximum": 1
+                  },
+                  "minItems": 3,
+                  "maxItems": 3,
+                  "default": [
+                    1,
+                    0,
+                    0
+                  ]
+                },
+                "up": {
+                  "type": "array",
+                  "items": {
+                    "type": "number",
+                    "minimum": -1,
+                    "maximum": 1
+                  },
+                  "minItems": 3,
+                  "maxItems": 3,
+                  "default": [
+                    0,
+                    1,
+                    0
+                  ]
+                },
+                "normal": {
+                  "type": "array",
+                  "items": {
+                    "type": "number",
+                    "minimum": -1,
+                    "maximum": 1
+                  },
+                  "minItems": 3,
+                  "maxItems": 3,
+                  "default": [
+                    0,
+                    0,
+                    1
+                  ]
+                },
+                "confirmBaked": {
+                  "type": "boolean",
+                  "default": true
+                },
+                "flipWinding": {
+                  "type": "boolean",
+                  "default": false
+                },
+                "pixelWidth": {
+                  "type": "number",
+                  "minimum": 100,
+                  "maximum": 4096,
+                  "default": 1200
+                },
+                "clearance": {
+                  "type": "number",
+                  "minimum": 0.1,
+                  "maximum": 20,
+                  "default": 2
+                },
+                "poseDegrees": {
+                  "type": "array",
+                  "items": {
+                    "type": "number",
+                    "minimum": -60,
+                    "maximum": 60
+                  },
+                  "minItems": 3,
+                  "maxItems": 3,
+                  "default": [
+                    0,
+                    0,
+                    0
+                  ]
+                }
+              }
+            },
+            "glass": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "depth": {
+                  "type": "number",
+                  "minimum": 0.1,
+                  "maximum": 80,
+                  "default": 8
+                },
+                "bevel": {
+                  "type": "number",
+                  "minimum": 0,
+                  "maximum": 20,
+                  "default": 2
+                },
+                "faceGap": {
+                  "type": "number",
+                  "minimum": 0.01,
+                  "maximum": 10,
+                  "default": 0.3
+                },
+                "selectionGap": {
+                  "type": "number",
+                  "minimum": 0.01,
+                  "maximum": 10,
+                  "default": 0.7
+                },
+                "iconGap": {
+                  "type": "number",
+                  "minimum": 0.01,
+                  "maximum": 20,
+                  "default": 2
+                },
+                "color": {
+                  "type": "string",
+                  "minLength": 1,
+                  "pattern": "^#[0-9a-fA-F]{6}$",
+                  "default": "#aeb2ba"
+                },
+                "roughness": {
+                  "type": "number",
+                  "minimum": 0,
+                  "maximum": 1,
+                  "default": 0.34
+                },
+                "transmission": {
+                  "type": "number",
+                  "minimum": 0,
+                  "maximum": 1,
+                  "default": 0.96
+                },
+                "opticalThickness": {
+                  "type": "number",
+                  "minimum": 0,
+                  "maximum": 1,
+                  "default": 0.07
+                },
+                "ior": {
+                  "type": "number",
+                  "minimum": 1,
+                  "maximum": 2.33,
+                  "default": 1.35
+                },
+                "clearcoat": {
+                  "type": "number",
+                  "minimum": 0,
+                  "maximum": 1,
+                  "default": 0.3
+                },
+                "clearcoatRoughness": {
+                  "type": "number",
+                  "minimum": 0,
+                  "maximum": 1,
+                  "default": 0.3
+                },
+                "frostBlur": {
+                  "type": "number",
+                  "minimum": 0,
+                  "maximum": 64,
+                  "default": 16
+                },
+                "frost": {
+                  "type": "number",
+                  "minimum": 0,
+                  "maximum": 1,
+                  "default": 1
+                },
+                "rimStrength": {
+                  "type": "number",
+                  "minimum": 0,
+                  "maximum": 1,
+                  "default": 0.28
+                },
+                "formedRimStrength": {
+                  "type": "number",
+                  "minimum": 0,
+                  "maximum": 1,
+                  "default": 0.04
+                },
+                "bevelWidth": {
+                  "type": "number",
+                  "minimum": 0.1,
+                  "maximum": 40,
+                  "default": 11
+                },
+                "backdropStrength": {
+                  "type": "number",
+                  "minimum": 0,
+                  "maximum": 1,
+                  "default": 0.52
+                },
+                "selectionColor": {
+                  "type": "string",
+                  "minLength": 1,
+                  "pattern": "^#[0-9a-fA-F]{6}$",
+                  "default": "#444448"
+                },
+                "selectionOpacity": {
+                  "type": "number",
+                  "minimum": 0,
+                  "maximum": 1,
+                  "default": 0.32
+                }
+              }
+            },
+            "layout": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "compose": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "properties": {
+                    "x": {
+                      "type": "number",
+                      "minimum": 0,
+                      "maximum": 4096,
+                      "default": 930
+                    },
+                    "y": {
+                      "type": "number",
+                      "minimum": 0,
+                      "maximum": 8192,
+                      "default": 210
+                    },
+                    "width": {
+                      "type": "number",
+                      "minimum": 1,
+                      "maximum": 4096,
+                      "default": 180
+                    },
+                    "height": {
+                      "type": "number",
+                      "minimum": 1,
+                      "maximum": 4096,
+                      "default": 180
+                    },
+                    "z": {
+                      "type": "number",
+                      "minimum": 0.1,
+                      "maximum": 40,
+                      "default": 6
+                    },
+                    "icon": {
+                      "type": "object",
+                      "additionalProperties": false,
+                      "properties": {
+                        "type": {
+                          "type": "string",
+                          "enum": [
+                            "compose",
+                            "home",
+                            "inbox",
+                            "focus",
+                            "layers",
+                            "search"
+                          ],
+                          "default": "compose"
+                        },
+                        "size": {
+                          "type": "number",
+                          "minimum": 1,
+                          "maximum": 180,
+                          "default": 80
+                        }
+                      }
+                    }
+                  }
+                },
+                "navbar": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "properties": {
+                    "x": {
+                      "type": "number",
+                      "minimum": 0,
+                      "maximum": 4096,
+                      "default": 80
+                    },
+                    "bottom": {
+                      "type": "number",
+                      "minimum": 1,
+                      "maximum": 8192,
+                      "default": 330
+                    },
+                    "width": {
+                      "type": "number",
+                      "minimum": 1,
+                      "maximum": 4096,
+                      "default": 1040
+                    },
+                    "compactWidth": {
+                      "type": "number",
+                      "minimum": 1,
+                      "maximum": 4096,
+                      "default": 770
+                    },
+                    "height": {
+                      "type": "number",
+                      "minimum": 1,
+                      "maximum": 4096,
+                      "default": 180
+                    },
+                    "z": {
+                      "type": "number",
+                      "minimum": 0.1,
+                      "maximum": 40,
+                      "default": 6
+                    },
+                    "icons": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "additionalProperties": false,
+                        "properties": {
+                          "type": {
+                            "type": "string",
+                            "enum": [
+                              "compose",
+                              "home",
+                              "inbox",
+                              "focus",
+                              "layers",
+                              "search"
+                            ]
+                          },
+                          "size": {
+                            "type": "number",
+                            "minimum": 1,
+                            "maximum": 180
+                          }
+                        }
+                      },
+                      "minItems": 1,
+                      "default": [
+                        {
+                          "type": "home",
+                          "size": 90
+                        },
+                        {
+                          "type": "inbox",
+                          "size": 90
+                        },
+                        {
+                          "type": "focus",
+                          "size": 90
+                        },
+                        {
+                          "type": "layers",
+                          "size": 90
+                        }
+                      ]
+                    },
+                    "highlight": {
+                      "type": "object",
+                      "additionalProperties": false,
+                      "properties": {
+                        "shape": {
+                          "type": "string",
+                          "enum": [
+                            "ellipse",
+                            "capsule",
+                            "roundedRect"
+                          ],
+                          "default": "capsule"
+                        },
+                        "index": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "default": 0
+                        },
+                        "insetX": {
+                          "type": "number",
+                          "minimum": 0,
+                          "maximum": 100,
+                          "default": 6
+                        },
+                        "insetY": {
+                          "type": "number",
+                          "minimum": 0,
+                          "maximum": 100,
+                          "default": 11
+                        },
+                        "cornerRadius": {
+                          "type": "number",
+                          "minimum": 0,
+                          "maximum": 100,
+                          "default": 32
+                        }
+                      }
+                    }
+                  }
+                },
+                "search": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "properties": {
+                    "x": {
+                      "type": "number",
+                      "minimum": 0,
+                      "maximum": 4096,
+                      "default": 930
+                    },
+                    "bottom": {
+                      "type": "number",
+                      "minimum": 1,
+                      "maximum": 8192,
+                      "default": 330
+                    },
+                    "width": {
+                      "type": "number",
+                      "minimum": 1,
+                      "maximum": 4096,
+                      "default": 180
+                    },
+                    "height": {
+                      "type": "number",
+                      "minimum": 1,
+                      "maximum": 4096,
+                      "default": 180
+                    },
+                    "z": {
+                      "type": "number",
+                      "minimum": 0.1,
+                      "maximum": 40,
+                      "default": 6
+                    },
+                    "icon": {
+                      "type": "object",
+                      "additionalProperties": false,
+                      "properties": {
+                        "type": {
+                          "type": "string",
+                          "enum": [
+                            "compose",
+                            "home",
+                            "inbox",
+                            "focus",
+                            "layers",
+                            "search"
+                          ],
+                          "default": "search"
+                        },
+                        "size": {
+                          "type": "number",
+                          "minimum": 1,
+                          "maximum": 180,
+                          "default": 78
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "motion": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "compose": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "properties": {
+                    "scale": {
+                      "type": "array",
+                      "items": {
+                        "type": "array",
+                        "items": {
+                          "type": "number",
+                          "minimum": -10000,
+                          "maximum": 10000
+                        },
+                        "minItems": 2,
+                        "maxItems": 2
+                      },
+                      "minItems": 1,
+                      "default": [
+                        [
+                          50,
+                          0
+                        ],
+                        [
+                          54,
+                          0.18
+                        ],
+                        [
+                          58,
+                          0.42
+                        ],
+                        [
+                          62,
+                          0.61
+                        ],
+                        [
+                          66,
+                          0.77
+                        ],
+                        [
+                          70,
+                          0.92
+                        ],
+                        [
+                          75,
+                          1.07
+                        ],
+                        [
+                          85,
+                          1.02
+                        ],
+                        [
+                          110,
+                          1
+                        ]
+                      ]
+                    },
+                    "stretch": {
+                      "type": "number",
+                      "minimum": 0,
+                      "maximum": 0.2,
+                      "default": 0.07
+                    },
+                    "settle": {
+                      "type": "array",
+                      "items": {
+                        "type": "number",
+                        "minimum": 0,
+                        "maximum": 100000
+                      },
+                      "minItems": 2,
+                      "maxItems": 2,
+                      "default": [
+                        63,
+                        95
+                      ]
+                    },
+                    "formation": {
+                      "type": "array",
+                      "items": {
+                        "type": "number",
+                        "minimum": 0,
+                        "maximum": 100000
+                      },
+                      "minItems": 2,
+                      "maxItems": 2,
+                      "default": [
+                        54,
+                        86
+                      ]
+                    },
+                    "frost": {
+                      "type": "array",
+                      "items": {
+                        "type": "number",
+                        "minimum": 0,
+                        "maximum": 100000
+                      },
+                      "minItems": 2,
+                      "maxItems": 2,
+                      "default": [
+                        64,
+                        92
+                      ]
+                    },
+                    "reveal": {
+                      "type": "array",
+                      "items": {
+                        "type": "number",
+                        "minimum": 0,
+                        "maximum": 100000
+                      },
+                      "minItems": 2,
+                      "maxItems": 2,
+                      "default": [
+                        50,
+                        58
+                      ]
+                    },
+                    "icon": {
+                      "type": "array",
+                      "items": {
+                        "type": "number",
+                        "minimum": 0,
+                        "maximum": 100000
+                      },
+                      "minItems": 2,
+                      "maxItems": 2,
+                      "default": [
+                        96,
+                        132
+                      ]
+                    }
+                  }
+                },
+                "navbar": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "properties": {
+                    "formation": {
+                      "type": "array",
+                      "items": {
+                        "type": "number",
+                        "minimum": 0,
+                        "maximum": 100000
+                      },
+                      "minItems": 2,
+                      "maxItems": 2,
+                      "default": [
+                        220,
+                        274
+                      ]
+                    },
+                    "frost": {
+                      "type": "array",
+                      "items": {
+                        "type": "number",
+                        "minimum": 0,
+                        "maximum": 100000
+                      },
+                      "minItems": 2,
+                      "maxItems": 2,
+                      "default": [
+                        220,
+                        275
+                      ]
+                    },
+                    "initialFormation": {
+                      "type": "number",
+                      "minimum": 0,
+                      "maximum": 1,
+                      "default": 0.7
+                    },
+                    "selection": {
+                      "type": "array",
+                      "items": {
+                        "type": "number",
+                        "minimum": 0,
+                        "maximum": 100000
+                      },
+                      "minItems": 2,
+                      "maxItems": 2,
+                      "default": [
+                        274,
+                        310
+                      ]
+                    },
+                    "initialFrost": {
+                      "type": "number",
+                      "minimum": 0,
+                      "maximum": 1,
+                      "default": 0.45
+                    },
+                    "icons": {
+                      "type": "array",
+                      "items": {
+                        "type": "array",
+                        "items": {
+                          "type": "number",
+                          "minimum": 0,
+                          "maximum": 100000
+                        },
+                        "minItems": 2,
+                        "maxItems": 2
+                      },
+                      "minItems": 1,
+                      "default": [
+                        [
+                          274,
+                          310
+                        ],
+                        [
+                          355,
+                          399
+                        ],
+                        [
+                          411,
+                          450
+                        ],
+                        [
+                          463,
+                          500
+                        ]
+                      ]
+                    }
+                  }
+                },
+                "search": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "properties": {
+                    "formation": {
+                      "type": "array",
+                      "items": {
+                        "type": "number",
+                        "minimum": 0,
+                        "maximum": 100000
+                      },
+                      "minItems": 2,
+                      "maxItems": 2,
+                      "default": [
+                        536,
+                        580
+                      ]
+                    },
+                    "frost": {
+                      "type": "array",
+                      "items": {
+                        "type": "number",
+                        "minimum": 0,
+                        "maximum": 100000
+                      },
+                      "minItems": 2,
+                      "maxItems": 2,
+                      "default": [
+                        536,
+                        587
+                      ]
+                    },
+                    "initialFormation": {
+                      "type": "number",
+                      "minimum": 0,
+                      "maximum": 1,
+                      "default": 0.55
+                    },
+                    "initialFrost": {
+                      "type": "number",
+                      "minimum": 0,
+                      "maximum": 1,
+                      "default": 0.3
+                    },
+                    "icon": {
+                      "type": "array",
+                      "items": {
+                        "type": "number",
+                        "minimum": 0,
+                        "maximum": 100000
+                      },
+                      "minItems": 2,
+                      "maxItems": 2,
+                      "default": [
+                        580,
+                        620
+                      ]
+                    }
+                  }
+                }
+              }
+            },
+            "camera": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "fov": {
+                  "type": "number",
+                  "minimum": 1,
+                  "maximum": 90,
+                  "default": 12
+                },
+                "anchorDepth": {
+                  "type": "number",
+                  "minimum": 0.1,
+                  "maximum": 120,
+                  "default": 11
+                },
+                "compose": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "properties": {
+                    "rotation": {
+                      "type": "array",
+                      "items": {
+                        "type": "array",
+                        "items": {
+                          "type": "number",
+                          "minimum": -10000,
+                          "maximum": 10000
+                        },
+                        "minItems": 4,
+                        "maxItems": 4
+                      },
+                      "minItems": 1,
+                      "default": [
+                        [
+                          0,
+                          -0.928,
+                          -0.312,
+                          0.152
+                        ],
+                        [
+                          60,
+                          -0.932302,
+                          -0.268773,
+                          0.157455
+                        ],
+                        [
+                          90,
+                          -0.934702,
+                          -0.247036,
+                          0.160414
+                        ],
+                        [
+                          120,
+                          -0.936682,
+                          -0.22455,
+                          0.161737
+                        ],
+                        [
+                          150,
+                          -0.939321,
+                          -0.201198,
+                          0.163632
+                        ],
+                        [
+                          219,
+                          -0.943623,
+                          -0.1445,
+                          0.167182
+                        ]
+                      ]
+                    },
+                    "target": {
+                      "type": "array",
+                      "items": {
+                        "type": "array",
+                        "items": {
+                          "type": "number",
+                          "minimum": -10000,
+                          "maximum": 10000
+                        },
+                        "minItems": 4,
+                        "maxItems": 4
+                      },
+                      "minItems": 1,
+                      "default": [
+                        [
+                          0,
+                          0.495,
+                          0.515,
+                          0.195
+                        ],
+                        [
+                          220,
+                          0.495,
+                          0.515,
+                          0.225
+                        ]
+                      ]
+                    }
+                  }
+                },
+                "navbar": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "properties": {
+                    "rotation": {
+                      "type": "array",
+                      "items": {
+                        "type": "array",
+                        "items": {
+                          "type": "number",
+                          "minimum": -10000,
+                          "maximum": 10000
+                        },
+                        "minItems": 4,
+                        "maxItems": 4
+                      },
+                      "minItems": 1,
+                      "default": [
+                        [
+                          220,
+                          -0.93,
+                          -0.45,
+                          -0.22
+                        ],
+                        [
+                          536,
+                          -0.93,
+                          -0.45,
+                          -0.29
+                        ]
+                      ]
+                    },
+                    "target": {
+                      "type": "array",
+                      "items": {
+                        "type": "array",
+                        "items": {
+                          "type": "number",
+                          "minimum": -10000,
+                          "maximum": 10000
+                        },
+                        "minItems": 4,
+                        "maxItems": 4
+                      },
+                      "minItems": 1,
+                      "default": [
+                        [
+                          220,
+                          0.52,
+                          0.407,
+                          0.734
+                        ],
+                        [
+                          300,
+                          0.523,
+                          0.46,
+                          0.756
+                        ],
+                        [
+                          390,
+                          0.534,
+                          0.453,
+                          0.761
+                        ],
+                        [
+                          535,
+                          0.532,
+                          0.432,
+                          0.781
+                        ]
+                      ]
+                    }
+                  }
+                },
+                "search": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "properties": {
+                    "rotation": {
+                      "type": "array",
+                      "items": {
+                        "type": "array",
+                        "items": {
+                          "type": "number",
+                          "minimum": -10000,
+                          "maximum": 10000
+                        },
+                        "minItems": 4,
+                        "maxItems": 4
+                      },
+                      "minItems": 1,
+                      "default": [
+                        [
+                          536,
+                          -0.25,
+                          -0.88,
+                          -0.33
+                        ],
+                        [
+                          698,
+                          -0.25,
+                          -0.88,
+                          -0.315
+                        ]
+                      ]
+                    },
+                    "target": {
+                      "type": "array",
+                      "items": {
+                        "type": "array",
+                        "items": {
+                          "type": "number",
+                          "minimum": -10000,
+                          "maximum": 10000
+                        },
+                        "minItems": 4,
+                        "maxItems": 4
+                      },
+                      "minItems": 1,
+                      "default": [
+                        [
+                          536,
+                          0.62,
+                          0.415,
+                          0.156
+                        ]
+                      ]
+                    }
+                  }
+                },
+                "framing": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "properties": {
+                    "offset": {
+                      "type": "array",
+                      "items": {
+                        "type": "number",
+                        "minimum": -0.4,
+                        "maximum": 0.4
+                      },
+                      "minItems": 2,
+                      "maxItems": 2,
+                      "default": [
+                        0,
+                        0
+                      ]
+                    },
+                    "zoom": {
+                      "type": "number",
+                      "minimum": 0.25,
+                      "maximum": 2,
+                      "default": 1
+                    }
+                  }
+                }
+              }
+            },
+            "screen": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "source": {
+                  "type": "string",
+                  "enum": [
+                    "simulated",
+                    "asset"
+                  ],
+                  "default": "simulated"
+                },
+                "background": {
+                  "type": "string",
+                  "minLength": 1,
+                  "pattern": "^#[0-9a-fA-F]{6}$",
+                  "default": "#09090b"
+                },
+                "fontFamily": {
+                  "type": "string",
+                  "minLength": 1,
+                  "default": "Inter, Arial, sans-serif"
+                },
+                "fontSize": {
+                  "type": "number",
+                  "minimum": 8,
+                  "maximum": 160,
+                  "default": 49
+                },
+                "textColor": {
+                  "type": "string",
+                  "minLength": 1,
+                  "pattern": "^#[0-9a-fA-F]{6}$",
+                  "default": "#8d8d92"
+                },
+                "selectedTextColor": {
+                  "type": "string",
+                  "minLength": 1,
+                  "pattern": "^#[0-9a-fA-F]{6}$",
+                  "default": "#b6b6b8"
+                },
+                "selectedRow": {
+                  "type": "number",
+                  "minimum": -1,
+                  "maximum": 100,
+                  "default": 5
+                },
+                "rows": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "properties": {
+                      "label": {
+                        "type": "string",
+                        "minLength": 1
+                      },
+                      "color": {
+                        "type": "string",
+                        "minLength": 1,
+                        "pattern": "^#[0-9a-fA-F]{6}$"
+                      }
+                    }
+                  },
+                  "minItems": 1,
+                  "default": [
+                    {
+                      "label": "Projects",
+                      "color": "#575365"
+                    },
+                    {
+                      "label": "Teams",
+                      "color": "#45454c"
+                    },
+                    {
+                      "label": "Website",
+                      "color": "#468756"
+                    },
+                    {
+                      "label": "iOS",
+                      "color": "#5268c8"
+                    },
+                    {
+                      "label": "Android",
+                      "color": "#a14355"
+                    },
+                    {
+                      "label": "Product",
+                      "color": "#6d58bd"
+                    },
+                    {
+                      "label": "Design",
+                      "color": "#7661ba"
+                    }
+                  ]
+                },
+                "rowsBottom": {
+                  "type": "number",
+                  "minimum": 1,
+                  "maximum": 8192,
+                  "default": 1080
+                },
+                "rowGap": {
+                  "type": "number",
+                  "minimum": 1,
+                  "maximum": 1000,
+                  "default": 142
+                },
+                "iconX": {
+                  "type": "number",
+                  "minimum": 0,
+                  "maximum": 4096,
+                  "default": 145
+                },
+                "textX": {
+                  "type": "number",
+                  "minimum": 0,
+                  "maximum": 4096,
+                  "default": 215
+                },
+                "iconRadius": {
+                  "type": "number",
+                  "minimum": 1,
+                  "maximum": 100,
+                  "default": 28
+                },
+                "statusBar": {
+                  "type": "boolean",
+                  "default": true
+                }
+              }
+            },
+            "icons": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "inactiveOpacity": {
+                  "type": "number",
+                  "minimum": 0,
+                  "maximum": 1,
+                  "default": 0.58
+                },
+                "color": {
+                  "type": "string",
+                  "minLength": 1,
+                  "pattern": "^#[0-9a-fA-F]{6}$",
+                  "default": "#f5f5f5"
+                },
+                "strokeWidth": {
+                  "type": "number",
+                  "minimum": 1,
+                  "maximum": 20,
+                  "default": 8
+                }
+              }
+            },
+            "focus": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "enabled": {
+                  "type": "boolean",
+                  "default": true
+                },
+                "ranges": {
+                  "type": "array",
+                  "items": {
+                    "type": "number",
+                    "minimum": 0.01,
+                    "maximum": 100
+                  },
+                  "minItems": 3,
+                  "maxItems": 3,
+                  "default": [
+                    2,
+                    3,
+                    1.8
+                  ]
+                },
+                "bokeh": {
+                  "type": "number",
+                  "minimum": 0,
+                  "maximum": 5,
+                  "default": 0.8
+                },
+                "resolutionScale": {
+                  "type": "number",
+                  "minimum": 0.1,
+                  "maximum": 1,
+                  "default": 1
+                }
+              }
+            },
+            "lighting": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "ambient": {
+                  "type": "number",
+                  "minimum": 0,
+                  "maximum": 5,
+                  "default": 0.13
+                },
+                "key": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "properties": {
+                    "position": {
+                      "type": "array",
+                      "items": {
+                        "type": "number",
+                        "minimum": -10000,
+                        "maximum": 10000
+                      },
+                      "minItems": 3,
+                      "maxItems": 3,
+                      "default": [
+                        -8,
+                        12,
+                        12
+                      ]
+                    },
+                    "intensity": {
+                      "type": "number",
+                      "minimum": 0,
+                      "maximum": 10,
+                      "default": 0.9
+                    },
+                    "color": {
+                      "type": "string",
+                      "minLength": 1,
+                      "pattern": "^#[0-9a-fA-F]{6}$",
+                      "default": "#d8d9e3"
+                    }
+                  }
+                },
+                "fill": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "properties": {
+                    "position": {
+                      "type": "array",
+                      "items": {
+                        "type": "number",
+                        "minimum": -10000,
+                        "maximum": 10000
+                      },
+                      "minItems": 3,
+                      "maxItems": 3,
+                      "default": [
+                        8,
+                        -8,
+                        5
+                      ]
+                    },
+                    "intensity": {
+                      "type": "number",
+                      "minimum": 0,
+                      "maximum": 10,
+                      "default": 0.5
+                    },
+                    "color": {
+                      "type": "string",
+                      "minLength": 1,
+                      "pattern": "^#[0-9a-fA-F]{6}$",
+                      "default": "#bcc2cf"
+                    }
+                  }
+                }
+              }
+            },
+            "hardware": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "color": {
+                  "type": "string",
+                  "minLength": 1,
+                  "pattern": "^#[0-9a-fA-F]{6}$",
+                  "default": "#19191b"
+                },
+                "screenColor": {
+                  "type": "string",
+                  "minLength": 1,
+                  "pattern": "^#[0-9a-fA-F]{6}$",
+                  "default": "#09090b"
+                },
+                "frameMetalness": {
+                  "type": "number",
+                  "minimum": 0,
+                  "maximum": 1,
+                  "default": 0.3
+                },
+                "metalness": {
+                  "type": "number",
+                  "minimum": 0,
+                  "maximum": 1,
+                  "default": 0.06
+                },
+                "roughness": {
+                  "type": "number",
+                  "minimum": 0,
+                  "maximum": 1,
+                  "default": 0.68
+                },
+                "clearcoat": {
+                  "type": "number",
+                  "minimum": 0,
+                  "maximum": 1,
+                  "default": 0.06
+                }
+              }
+            },
+            "endCard": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "text": {
+                  "type": "string",
+                  "minLength": 1,
+                  "default": "Your product"
+                },
+                "color": {
+                  "type": "string",
+                  "minLength": 1,
+                  "pattern": "^#[0-9a-fA-F]{6}$",
+                  "default": "#f5f5f5"
+                },
+                "fontFamily": {
+                  "type": "string",
+                  "minLength": 1,
+                  "default": "Inter"
+                },
+                "showMark": {
+                  "type": "boolean",
+                  "default": false
+                }
+              }
+            }
+          }
+        }
+      }
+    ],
+    "cloudBrandKit": {
+      "kitId": "cueframe-recipes-device-ui-motion",
+      "name": "Device UI Motion",
+      "description": "Unbranded glass UI showcase.",
+      "colors": {
+        "primary": "#aeb2ba",
+        "secondary": "#8d8d92",
+        "accent": "#f5f5f5",
+        "background": "#000000",
+        "text": "#f5f5f5"
+      },
+      "headingFont": {
+        "fontFamily": "Inter",
+        "fontWeight": 600
+      },
+      "bodyFont": {
+        "fontFamily": "Inter",
+        "fontWeight": 500
+      }
+    }
+  }
+}

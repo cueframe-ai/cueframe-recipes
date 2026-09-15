@@ -1,0 +1,17 @@
+{
+  "componentsDir": "cueframe/components",
+  "components": {
+    "device-ui-motion": {
+      "custom": true,
+      "manifest": {
+        "version": 2,
+        "alphaPolicy": "allows-opaque",
+        "graphics": {"api": "webgl", "required": true, "accelerationPreference": "hardware-preferred"},
+        "assets": {
+          "model": {"kind": "image", "mimeTypes": ["image/svg+xml"], "required": true},
+          "screen": {"kind": "image", "required": false}
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,14 @@
+{
+  "name": "@cueframe-recipes/device-ui-motion",
+  "private": true,
+  "license": "AGPL-3.0-only",
+  "engines": {"node": ">=24"},
+  "type": "module",
+  "scripts": {
+    "build": "node build-project-template.mjs",
+    "test": "node --test tests/*.test.mjs"
+  },
+  "devDependencies": {
+    "esbuild": "0.25.12"
+  }
+}

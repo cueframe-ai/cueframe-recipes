@@ -1,0 +1,9 @@
+{
+  "schemaVersion": 1,
+  "recipes": [
+    {
+      "slug": "device-ui-motion",
+      "reason": "Awaiting a hosted demonstration render and poster."
+    }
+  ]
+}

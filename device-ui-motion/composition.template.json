@@ -1,0 +1,34 @@
+{
+  "v": 1,
+  "format": {
+    "aspectRatio": "16:9",
+    "fps": 60,
+    "resolution": "hd"
+  },
+  "tracks": [
+    {
+      "id": "device-ui",
+      "kind": "overlay",
+      "name": "Device UI showcase",
+      "contents": [
+        {
+          "id": "device-ui-showcase",
+          "kind": "overlay",
+          "startTime": 0,
+          "duration": 15.166666666666666,
+          "source": {
+            "kind": "component",
+            "componentId": "device-ui-motion",
+            "props": {
+              "shot": "film"
+            },
+            "assets": {
+              "model": "REPLACE_WITH_MEDIA_ID"
+            },
+            "zPlane": "front"
+          }
+        }
+      ]
+    }
+  ]
+}

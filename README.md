@@ -1,28 +1,43 @@
 # CueFrame recipes
 
 Real, editable video projects that show what CueFrame is best at. Each recipe
-starts with real source material, includes the composition or component source,
+starts with real source material, includes its composition and component source,
 and explains the editorial decisions behind the finished render.
 
-## Start with a finished use case
+Each recipe package has a stable top-level path, previews link to the finished
+renders, and repository maintenance scripts live in [`tools/`](./tools). The
+machine-readable catalog is [`recipes.json`](./recipes.json).
 
-| Use case | What you learn | Recipe |
-| --- | --- | --- |
-| Custom motion graphics | Author a reusable component, layer it over real footage, preserve source ambience, and render the shared composition | [Yosemite WarpText](./yosemite-warp-text) |
-| Subject-aware typography | Place editable type behind a real speaker while keeping captions, grade, and audio independent | [Yosemite Peregrines](./yosemite-peregrines) |
+Packages awaiting a hosted preview are tracked separately in
+[`draft-recipes.json`](./draft-recipes.json) so landing-page consumers only see
+complete gallery entries.
 
-## Recipes we are building next
+## Published recipes
 
-- Product demo from a real screen recording, with click-driven punch-ins.
-- Talking-head clip with active-speaker reframing and word-timed captions.
-- Podcast-to-social cutdown in 9:16.
-- Branded launch video with a real product capture.
-- One master edit derived into 16:9, 1:1, 4:5, and 9:16.
+### Yosemite Peregrines ([project download](https://raw.githubusercontent.com/cueframe-ai/cueframe-recipes/main/yosemite-peregrines/recipe.cueframe))
 
-These are use-case recipes, not flattened templates. Each recipe publishes a
-portable `recipe.cueframe` project with named media slots. Replace the source
-media, change the editable composition, and use that same project from the
-desktop app, MCP, REST API, or CLI.
+[![A ranger in Yosemite with the word Phenomenal behind him](https://cueframe.ai/showcase/yosemite-peregrines-phenomenal-poster.jpg)](https://cueframe.ai/demo/yosemite-peregrines-phenomenal.mp4)
+
+A subject-aware talking-head edit with an editorial title, word-timed captions,
+brand styling, and the original spoken audio. [Open the recipe](./yosemite-peregrines).
+
+### Yosemite WarpText ([project download](https://raw.githubusercontent.com/cueframe-ai/cueframe-recipes/main/yosemite-warp-text/recipe.cueframe))
+
+[![Yosemite Falls behind oversized amber typography](https://cueframe.ai/showcase/yosemite-poster.jpg)](https://cueframe.ai/demo/yosemite-warp-text.mp4)
+
+A landscape film with a reusable WebGL title component, cinematic color, and
+ambient sound. [Open the recipe](./yosemite-warp-text).
+
+## Draft recipes
+
+Draft packages are reviewable and downloadable, but are deliberately excluded
+from the public gallery catalog until their hosted render and poster exist.
+
+### Device UI Motion ([project download](https://raw.githubusercontent.com/cueframe-ai/cueframe-recipes/main/device-ui-motion/recipe.cueframe))
+
+An editable 3D glass-control showcase with a supplied phone mesh, product UI,
+and frame-driven camera choreography. [Open the recipe](./device-ui-motion).
+Bring your own model; a hosted video/poster has not been published yet.
 
 ## Run a recipe
 
@@ -40,20 +55,14 @@ server, or landing site.
 Every recipe documents its source attribution. Source masters are excluded;
 bring media you have permission to edit.
 
-Validate the catalog, portable projects, canonical URLs, and media slots with:
-
-```bash
-node validate-recipes.mjs
-```
-
 ## Contributing
 
-A useful recipe proves one recognizable job end to end. Include:
+See [CONTRIBUTING.md](./CONTRIBUTING.md) for the recipe package layout and
+submission checklist. Validate the catalog, portable projects, canonical URLs,
+and media slots with:
 
-- the use case and who it is for;
-- a composition template with replaceable media IDs;
-- source attribution and reproduction steps;
-- a review rubric with named timestamps and kill criteria; and
-- a link to the finished render.
+```bash
+node tools/validate-recipes.mjs
+```
 
 Recipes are licensed under [AGPL-3.0-only](./LICENSE).
