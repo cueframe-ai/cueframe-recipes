@@ -1,0 +1,474 @@
+{
+  "schemaVersion": 2,
+  "shot": "film",
+  "startFrame": 0,
+  "diagnostic": false,
+  "timeline": {
+    "fps": 60,
+    "cuts": [
+      220,
+      536,
+      698,
+      910
+    ],
+    "fadeIn": [
+      0,
+      30
+    ],
+    "logoIn": [
+      699,
+      720
+    ],
+    "logoOut": [
+      865,
+      909
+    ],
+    "speed": 1
+  },
+  "picture": {
+    "aspect": 2,
+    "background": "#000000"
+  },
+  "device": {
+    "displayMesh": "display",
+    "right": [
+      1,
+      0,
+      0
+    ],
+    "up": [
+      0,
+      1,
+      0
+    ],
+    "normal": [
+      0,
+      0,
+      1
+    ],
+    "confirmBaked": true,
+    "flipWinding": false,
+    "pixelWidth": 1200,
+    "clearance": 2,
+    "poseDegrees": [
+      0,
+      0,
+      0
+    ]
+  },
+  "glass": {
+    "depth": 8,
+    "bevel": 2,
+    "faceGap": 0.3,
+    "selectionGap": 0.7,
+    "iconGap": 2,
+    "color": "#aeb2ba",
+    "roughness": 0.34,
+    "transmission": 0.96,
+    "opticalThickness": 0.07,
+    "ior": 1.35,
+    "clearcoat": 0.3,
+    "clearcoatRoughness": 0.3,
+    "frostBlur": 16,
+    "frost": 1,
+    "rimStrength": 0.28,
+    "formedRimStrength": 0.04,
+    "bevelWidth": 11,
+    "backdropStrength": 0.52,
+    "selectionColor": "#444448",
+    "selectionOpacity": 0.32
+  },
+  "layout": {
+    "compose": {
+      "x": 930,
+      "y": 210,
+      "width": 180,
+      "height": 180,
+      "z": 6,
+      "icon": {
+        "type": "compose",
+        "size": 80
+      }
+    },
+    "navbar": {
+      "x": 80,
+      "bottom": 330,
+      "width": 1040,
+      "compactWidth": 770,
+      "height": 180,
+      "z": 6,
+      "icons": [
+        {
+          "type": "home",
+          "size": 90
+        },
+        {
+          "type": "inbox",
+          "size": 90
+        },
+        {
+          "type": "focus",
+          "size": 90
+        },
+        {
+          "type": "layers",
+          "size": 90
+        }
+      ],
+      "highlight": {
+        "shape": "capsule",
+        "index": 0,
+        "insetX": 6,
+        "insetY": 11,
+        "cornerRadius": 32
+      }
+    },
+    "search": {
+      "x": 930,
+      "bottom": 330,
+      "width": 180,
+      "height": 180,
+      "z": 6,
+      "icon": {
+        "type": "search",
+        "size": 78
+      }
+    }
+  },
+  "motion": {
+    "compose": {
+      "scale": [
+        [
+          50,
+          0
+        ],
+        [
+          54,
+          0.18
+        ],
+        [
+          58,
+          0.42
+        ],
+        [
+          62,
+          0.61
+        ],
+        [
+          66,
+          0.77
+        ],
+        [
+          70,
+          0.92
+        ],
+        [
+          75,
+          1.07
+        ],
+        [
+          85,
+          1.02
+        ],
+        [
+          110,
+          1
+        ]
+      ],
+      "stretch": 0.07,
+      "settle": [
+        63,
+        95
+      ],
+      "formation": [
+        54,
+        86
+      ],
+      "frost": [
+        64,
+        92
+      ],
+      "reveal": [
+        50,
+        58
+      ],
+      "icon": [
+        96,
+        132
+      ]
+    },
+    "navbar": {
+      "formation": [
+        220,
+        274
+      ],
+      "frost": [
+        220,
+        275
+      ],
+      "initialFormation": 0.7,
+      "initialFrost": 0.45,
+      "selection": [274, 310],
+      "icons": [
+        [
+          274,
+          310
+        ],
+        [
+          355,
+          399
+        ],
+        [
+          411,
+          450
+        ],
+        [
+          463,
+          500
+        ]
+      ]
+    },
+    "search": {
+      "formation": [
+        536,
+        580
+      ],
+      "frost": [
+        536,
+        587
+      ],
+      "initialFormation": 0.55,
+      "initialFrost": 0.3,
+      "icon": [
+        580,
+        620
+      ]
+    }
+  },
+  "camera": {
+    "fov": 12,
+    "anchorDepth": 11,
+    "compose": {
+      "rotation": [
+        [
+          0,
+          -0.928,
+          -0.312,
+          0.152
+        ],
+        [
+          60,
+          -0.932302,
+          -0.268773,
+          0.157455
+        ],
+        [
+          90,
+          -0.934702,
+          -0.247036,
+          0.160414
+        ],
+        [
+          120,
+          -0.936682,
+          -0.22455,
+          0.161737
+        ],
+        [
+          150,
+          -0.939321,
+          -0.201198,
+          0.163632
+        ],
+        [
+          219,
+          -0.943623,
+          -0.1445,
+          0.167182
+        ]
+      ],
+      "target": [
+        [
+          0,
+          0.495,
+          0.515,
+          0.195
+        ],
+        [
+          220,
+          0.495,
+          0.515,
+          0.225
+        ]
+      ]
+    },
+    "navbar": {
+      "rotation": [
+        [
+          220,
+          -0.93,
+          -0.45,
+          -0.22
+        ],
+        [
+          536,
+          -0.93,
+          -0.45,
+          -0.29
+        ]
+      ],
+      "target": [
+        [
+          220,
+          0.52,
+          0.407,
+          0.734
+        ],
+        [
+          300,
+          0.523,
+          0.46,
+          0.756
+        ],
+        [
+          390,
+          0.534,
+          0.453,
+          0.761
+        ],
+        [
+          535,
+          0.532,
+          0.432,
+          0.781
+        ]
+      ]
+    },
+    "search": {
+      "rotation": [
+        [
+          536,
+          -0.25,
+          -0.88,
+          -0.33
+        ],
+        [
+          698,
+          -0.25,
+          -0.88,
+          -0.315
+        ]
+      ],
+      "target": [
+        [
+          536,
+          0.62,
+          0.415,
+          0.156
+        ]
+      ]
+    },
+    "framing": {
+      "offset": [
+        0,
+        0
+      ],
+      "zoom": 1
+    }
+  },
+  "screen": {
+    "source": "simulated",
+    "background": "#09090b",
+    "fontFamily": "Inter, Arial, sans-serif",
+    "fontSize": 49,
+    "textColor": "#8d8d92",
+    "selectedTextColor": "#b6b6b8",
+    "selectedRow": 5,
+    "rows": [
+      {
+        "label": "Projects",
+        "color": "#575365"
+      },
+      {
+        "label": "Teams",
+        "color": "#45454c"
+      },
+      {
+        "label": "Website",
+        "color": "#468756"
+      },
+      {
+        "label": "iOS",
+        "color": "#5268c8"
+      },
+      {
+        "label": "Android",
+        "color": "#a14355"
+      },
+      {
+        "label": "Product",
+        "color": "#6d58bd"
+      },
+      {
+        "label": "Design",
+        "color": "#7661ba"
+      }
+    ],
+    "rowsBottom": 1080,
+    "rowGap": 142,
+    "iconX": 145,
+    "textX": 215,
+    "iconRadius": 28,
+    "statusBar": true
+  },
+  "icons": {
+    "color": "#f5f5f5",
+    "inactiveOpacity": 0.58,
+    "strokeWidth": 8
+  },
+  "focus": {
+    "enabled": true,
+    "ranges": [
+      2,
+      3,
+      1.8
+    ],
+    "bokeh": 0.8,
+    "resolutionScale": 1
+  },
+  "lighting": {
+    "ambient": 0.13,
+    "key": {
+      "position": [
+        -8,
+        12,
+        12
+      ],
+      "intensity": 0.9,
+      "color": "#d8d9e3"
+    },
+    "fill": {
+      "position": [
+        8,
+        -8,
+        5
+      ],
+      "intensity": 0.5,
+      "color": "#bcc2cf"
+    }
+  },
+  "hardware": {
+    "color": "#19191b",
+    "screenColor": "#09090b",
+    "frameMetalness": 0.3,
+    "metalness": 0.06,
+    "roughness": 0.68,
+    "clearcoat": 0.06
+  },
+  "endCard": {
+    "text": "Your product",
+    "color": "#f5f5f5",
+    "fontFamily": "Inter",
+    "showMark": false
+  }
+}

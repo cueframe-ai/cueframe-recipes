@@ -1,0 +1,20 @@
+{
+  "kitId": "cueframe-recipes-device-ui-motion",
+  "name": "Device UI Motion",
+  "description": "Unbranded glass UI showcase.",
+  "colors": {
+    "primary": "#aeb2ba",
+    "secondary": "#8d8d92",
+    "accent": "#f5f5f5",
+    "background": "#000000",
+    "text": "#f5f5f5"
+  },
+  "headingFont": {
+    "fontFamily": "Inter",
+    "fontWeight": 600
+  },
+  "bodyFont": {
+    "fontFamily": "Inter",
+    "fontWeight": 500
+  }
+}
